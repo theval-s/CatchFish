@@ -14,6 +14,7 @@ public class RootScope : LifetimeScope
         builder.Register<ConfigService>(Lifetime.Singleton);
         builder.Register<ServerTimeService>(Lifetime.Singleton);
         builder.Register<ProfileSyncService>(Lifetime.Singleton);
+        builder.Register<LoadingScreen>(Lifetime.Singleton);
         builder.Register<SceneLoader>(Lifetime.Singleton);
 
         // Domain
