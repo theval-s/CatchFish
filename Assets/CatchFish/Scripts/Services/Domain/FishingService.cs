@@ -27,6 +27,7 @@ public class FishingService
         // TODO: check the wanted level here once it exists
         Session = new FishingSessionState
         {
+            IsNewbie = _profile.State.Player.MatchesPlayed == 0,
             MaxDepth = _upgrades.Value(GearIds.LineLength),
             Durability = (int)_upgrades.Value(GearIds.LineDurability),
             Capacity = (int)_upgrades.Value(GearIds.HookCapacity),
@@ -37,6 +38,11 @@ public class FishingService
 
     public void CompleteRun()
     {
+        if (Session == null || Session.Phase == FishingPhase.Results)
+        {
+            return;
+        }
+
         Session.Phase = FishingPhase.Results;
 
         // Earnings can be negative (jellyfish); Add() doesn't go below zero.
@@ -46,6 +52,7 @@ public class FishingService
             _resources.Add(pair.Key, pair.Value);
         }
 
+        _profile.State.Player.MatchesPlayed++;
         _profile.Save();
         RunCompleted?.Invoke();
     }

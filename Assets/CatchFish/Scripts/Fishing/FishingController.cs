@@ -32,6 +32,10 @@ public class FishingController : MonoBehaviour
     [SerializeField] private float launchSpreadX = 1.2f;
     [SerializeField] private float shotRadius = 0.45f;
 
+    [Header("First run")]
+    [Range(0.1f, 1f)] [SerializeField] private float newbieLineSpeedMultiplier = 0.7f;
+    [Range(0.1f, 1f)] [SerializeField] private float newbieGravityMultiplier = 0.6f;
+
     private readonly List<Fish> _airborne = new List<Fish>();
     private FishingService _fishing;
     private Camera _camera;
@@ -98,7 +102,7 @@ public class FishingController : MonoBehaviour
     {
         Steer();
 
-        var speed = Session.ReelSpeed;
+        var speed = Session.ReelSpeed * (Session.IsNewbie ? newbieLineSpeedMultiplier : 1f);
         if (_slowdownLeft > 0f)
         {
             speed *= hitSlowdownFactor;
@@ -144,7 +148,7 @@ public class FishingController : MonoBehaviour
     private void UpdateAscent()
     {
         Steer();
-        hook.Move(Session.ReelSpeed * ascentSpeedMultiplier);
+        hook.Move(Session.ReelSpeed * ascentSpeedMultiplier * (Session.IsNewbie ? newbieLineSpeedMultiplier : 1f));
 
         foreach (var fish in spawner.AllFish)
         {
@@ -178,7 +182,7 @@ public class FishingController : MonoBehaviour
             var limit = spawner.HalfWidth - fish.Radius;
             var x = Mathf.Clamp(hook.transform.position.x + Random.Range(-launchSpreadX, launchSpreadX), -limit, limit);
             var velocity = new Vector2(Random.Range(-0.3f, 0.3f), Random.Range(launchSpeedMin, launchSpeedMax));
-            fish.Launch(new Vector2(x, 0f), velocity, gravity);
+            fish.Launch(new Vector2(x, 0f), velocity, gravity * (Session.IsNewbie ? newbieGravityMultiplier : 1f));
             _airborne.Add(fish);
         }
 

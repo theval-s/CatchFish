@@ -14,17 +14,50 @@ public class HubMenuView : MonoBehaviour
     [SerializeField] private Button homeTabButton;
     [SerializeField] private Button questsTabButton;
     [SerializeField] private GameObject questsBadge;
+    [SerializeField] private Button goFishingButton;
 
     [Header("Popups")]
     [SerializeField] private GameObject tacklePanel;
+    [SerializeField] private Button tackleButton;
+
+    private bool _newbieMode;
+    private Vector3 _goFishingScale;
 
     public event Action GoFishingClicked;
 
     private void Awake()
     {
+        _goFishingScale = goFishingButton.transform.localScale;
         ShowHome();
         CloseTackle();
     }
+
+    private void Update()
+    {
+        if (_newbieMode)
+        {
+            // Draw attention to the only available action on the first visit.
+            goFishingButton.transform.localScale = _goFishingScale * (1.05f + 0.05f * Mathf.Sin(Time.unscaledTime * 4f));
+        }
+    }
+
+    public void SetNewbieMode(bool enabled)
+    {
+        _newbieMode = enabled;
+        questsTabButton.interactable = !enabled;
+        tackleButton.interactable = !enabled;
+        if (enabled)
+        {
+            ShowHome();
+            CloseTackle();
+        }
+        else
+        {
+            goFishingButton.transform.localScale = _goFishingScale;
+        }
+    }
+
+    public void SetGoFishingEnabled(bool enabled) => goFishingButton.interactable = enabled;
 
     public void SetQuestsBadge(bool visible) => questsBadge.SetActive(visible);
 
@@ -34,9 +67,15 @@ public class HubMenuView : MonoBehaviour
 
     public void ShowHome() => ShowTab(home: true);
 
-    public void ShowQuests() => ShowTab(home: false);
+    public void ShowQuests()
+    {
+        if (!_newbieMode) ShowTab(home: false);
+    }
 
-    public void OpenTackle() => tacklePanel.SetActive(true);
+    public void OpenTackle()
+    {
+        if (!_newbieMode) tacklePanel.SetActive(true);
+    }
 
     public void CloseTackle() => tacklePanel.SetActive(false);
 
@@ -47,6 +86,6 @@ public class HubMenuView : MonoBehaviour
 
         // The open tab's button is disabled so it reads as selected.
         homeTabButton.interactable = !home;
-        questsTabButton.interactable = home;
+        questsTabButton.interactable = home && !_newbieMode;
     }
 }

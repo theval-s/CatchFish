@@ -14,6 +14,7 @@ public enum FishingPhase
 /// </summary>
 public class FishingSessionState
 {
+    public bool IsNewbie { get; set; }
     public FishingPhase Phase { get; set; } = FishingPhase.Descent;
 
     // Gear snapshot taken when the run starts.

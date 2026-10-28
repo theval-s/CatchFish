@@ -4191,7 +4191,9 @@ MonoBehaviour:
   homeTabButton: {fileID: 1326806169}
   questsTabButton: {fileID: 437503962}
   questsBadge: {fileID: 1905528096}
+  goFishingButton: {fileID: 291952305}
   tacklePanel: {fileID: 2136065389}
+  tackleButton: {fileID: 1661476261}
 --- !u!114 &1889816693
 MonoBehaviour:
   m_ObjectHideFlags: 0

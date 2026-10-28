@@ -25,6 +25,7 @@ public class GameState
 /// <summary>Currencies and the fish collection.</summary>
 public class PlayerState
 {
+    public int MatchesPlayed { get; set; }
     public int Gems { get; set; }
     public int LaunderedRubles { get; set; }
     public int DirtyRubles { get; set; }
