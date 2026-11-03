@@ -1,0 +1,41 @@
+{
+  "fish": [
+    { "id": "f1", "name": "Roach",           "value": 2,   "minDepth": 0,   "maxDepth": 80,  "swimSpeed": 1.2, "size": 0.6, "spawnWeight": 10,  "isCollectible": false },
+    { "id": "f2", "name": "Crucian carp",    "value": 6,   "minDepth": 15,  "maxDepth": 150, "swimSpeed": 1.8, "size": 0.7, "spawnWeight": 7,   "isCollectible": false },
+    { "id": "f3", "name": "Gudgeon",         "value": 15,  "minDepth": 50,  "maxDepth": 250, "swimSpeed": 2.4, "size": 0.9, "spawnWeight": 5,   "isCollectible": false },
+    { "id": "f4", "name": "Pike",            "value": 40,  "minDepth": 110, "maxDepth": 400, "swimSpeed": 1.0, "size": 0.9, "spawnWeight": 3,   "isCollectible": false },
+    { "id": "f5", "name": "Golden sturgeon", "value": 120, "minDepth": 30,  "maxDepth": 400, "swimSpeed": 3.2, "size": 0.6, "spawnWeight": 1.5, "isCollectible": true },
+    { "id": "f6", "name": "Jellyfish",       "value": -10, "minDepth": 25,  "maxDepth": 400, "swimSpeed": 0.4, "size": 0.8, "spawnWeight": 4,   "isCollectible": false },
+    { "id": "f7", "name": "Glow catfish",    "value": 60,  "minDepth": 150, "maxDepth": 400, "swimSpeed": 2.0, "size": 0.8, "spawnWeight": 0.8, "isCollectible": true }
+  ],
+  "quests": [
+    {
+      "id": 1,
+      "title": "Proof of quality",
+      "description": "The buyer on Fishy Road wants proof you can get the rare stuff. Bring one golden sturgeon.",
+      "requirements": { "f5": 1 },
+      "unlocksId": [ 2 ]
+    },
+    {
+      "id": 2,
+      "title": "Chef's special",
+      "description": "A restaurant pays well for a glowing catfish. And two more sturgeons for the chef.",
+      "requirements": { "f5": 2, "f7": 1 },
+      "unlocksId": [ 3 ]
+    },
+    {
+      "id": 3,
+      "title": "Clean money",
+      "description": "Lyonya needs laundered rubles to open the first class of the school.",
+      "requirements": { "lr": 1000 },
+      "unlocksId": []
+    }
+  ],
+  "startingQuests": [ 1 ],
+  "gear": [
+    { "id": "lineLength",     "title": "Line length",       "unit": "m",      "maxLevel": 10, "baseCost": 60,  "costGrowth": 1.6,  "baseValue": 50, "valuePerLevel": 35 },
+    { "id": "lineDurability", "title": "Sinker durability", "unit": " hits",  "maxLevel": 5,  "baseCost": 150, "costGrowth": 2.0,  "baseValue": 0,  "valuePerLevel": 1 },
+    { "id": "hookCapacity",   "title": "Hook capacity",     "unit": " fish",  "maxLevel": 10, "baseCost": 80,  "costGrowth": 1.55, "baseValue": 6,  "valuePerLevel": 3 },
+    { "id": "reelSpeed",      "title": "Reel speed",        "unit": " m/s",   "maxLevel": 8,  "baseCost": 100, "costGrowth": 1.7,  "baseValue": 7,  "valuePerLevel": 1.5 }
+  ]
+}
