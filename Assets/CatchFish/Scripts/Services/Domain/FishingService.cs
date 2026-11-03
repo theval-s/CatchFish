@@ -22,12 +22,15 @@ public class FishingService
 
     public FishingSessionState Session { get; private set; }
 
+    /// <summary>The first run is easier, and until it's done the hub offers nothing but fishing.</summary>
+    public bool IsFirstRun => _profile.State.Player.RunsCompleted == 0;
+
     public FishingSessionState StartRun()
     {
         // TODO: check the wanted level here once it exists
         Session = new FishingSessionState
         {
-            IsNewbie = _profile.State.Player.MatchesPlayed == 0,
+            IsFirstRun = IsFirstRun,
             MaxDepth = _upgrades.Value(GearIds.LineLength),
             Durability = (int)_upgrades.Value(GearIds.LineDurability),
             Capacity = (int)_upgrades.Value(GearIds.HookCapacity),
@@ -52,7 +55,7 @@ public class FishingService
             _resources.Add(pair.Key, pair.Value);
         }
 
-        _profile.State.Player.MatchesPlayed++;
+        _profile.State.Player.RunsCompleted++;
         _profile.Save();
         RunCompleted?.Invoke();
     }

@@ -1,3 +1,4 @@
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
@@ -7,6 +8,8 @@ using VContainer.Unity;
 /// </summary>
 public class RootScope : LifetimeScope
 {
+    [SerializeField] private LoadingScreen loadingScreen;
+
     protected override void Configure(IContainerBuilder builder)
     {
         // Infrastructure. Swap LocalApiClient for the real server client here.
@@ -14,7 +17,7 @@ public class RootScope : LifetimeScope
         builder.Register<ConfigService>(Lifetime.Singleton);
         builder.Register<ServerTimeService>(Lifetime.Singleton);
         builder.Register<ProfileSyncService>(Lifetime.Singleton);
-        builder.Register<LoadingScreen>(Lifetime.Singleton);
+        builder.RegisterComponent(loadingScreen);
         builder.Register<SceneLoader>(Lifetime.Singleton);
 
         // Domain

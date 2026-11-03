@@ -33,14 +33,16 @@ public class FishingController : MonoBehaviour
     [SerializeField] private float shotRadius = 0.45f;
 
     [Header("First run")]
-    [Range(0.1f, 1f)] [SerializeField] private float newbieLineSpeedMultiplier = 0.7f;
-    [Range(0.1f, 1f)] [SerializeField] private float newbieGravityMultiplier = 0.6f;
+    [Range(0.1f, 1f)] [SerializeField] private float firstRunLineSpeedMultiplier = 0.7f;
+    [Range(0.1f, 1f)] [SerializeField] private float firstRunGravityMultiplier = 0.6f;
 
     private readonly List<Fish> _airborne = new List<Fish>();
     private FishingService _fishing;
     private Camera _camera;
     private FishingInput _input;
     private float _slowdownLeft;
+    private float _lineSpeed;
+    private float _fishGravity;
 
     /// <summary>Raised when a fish is shot: world position and money earned (for HUD popups).</summary>
     public event Action<Vector2, int> FishShot;
@@ -74,6 +76,8 @@ public class FishingController : MonoBehaviour
         }
 
         _slowdownLeft = 0f;
+        _lineSpeed = Session.ReelSpeed * (Session.IsFirstRun ? firstRunLineSpeedMultiplier : 1f);
+        _fishGravity = gravity * (Session.IsFirstRun ? firstRunGravityMultiplier : 1f);
         hook.ResetForRun(Session.Durability, Session.Capacity);
         spawner.SpawnOcean(Session.MaxDepth);
     }
@@ -102,7 +106,7 @@ public class FishingController : MonoBehaviour
     {
         Steer();
 
-        var speed = Session.ReelSpeed * (Session.IsNewbie ? newbieLineSpeedMultiplier : 1f);
+        var speed = _lineSpeed;
         if (_slowdownLeft > 0f)
         {
             speed *= hitSlowdownFactor;
@@ -148,7 +152,7 @@ public class FishingController : MonoBehaviour
     private void UpdateAscent()
     {
         Steer();
-        hook.Move(Session.ReelSpeed * ascentSpeedMultiplier * (Session.IsNewbie ? newbieLineSpeedMultiplier : 1f));
+        hook.Move(_lineSpeed * ascentSpeedMultiplier);
 
         foreach (var fish in spawner.AllFish)
         {
@@ -182,7 +186,7 @@ public class FishingController : MonoBehaviour
             var limit = spawner.HalfWidth - fish.Radius;
             var x = Mathf.Clamp(hook.transform.position.x + Random.Range(-launchSpreadX, launchSpreadX), -limit, limit);
             var velocity = new Vector2(Random.Range(-0.3f, 0.3f), Random.Range(launchSpeedMin, launchSpeedMax));
-            fish.Launch(new Vector2(x, 0f), velocity, gravity * (Session.IsNewbie ? newbieGravityMultiplier : 1f));
+            fish.Launch(new Vector2(x, 0f), velocity, _fishGravity);
             _airborne.Add(fish);
         }
 

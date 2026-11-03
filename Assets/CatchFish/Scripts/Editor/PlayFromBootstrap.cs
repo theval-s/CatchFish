@@ -12,8 +12,14 @@ public static class PlayFromBootstrap
 
     static PlayFromBootstrap()
     {
-        // Assets may not be imported yet while the editor is still loading.
-        EditorApplication.delayCall += () =>
-            EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(BootstrapPath);
+        // Set right before every Play: setting it once at load time could run before the scene asset
+        // was imported, and then Play started from the open scene.
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state == PlayModeStateChange.ExitingEditMode)
+            {
+                EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(BootstrapPath);
+            }
+        };
     }
 }

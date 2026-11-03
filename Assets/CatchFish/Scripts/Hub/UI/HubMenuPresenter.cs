@@ -8,22 +8,18 @@ public class HubMenuPresenter : IStartable, IDisposable
     private readonly FishingService _fishing;
     private readonly QuestService _quests;
     private readonly SceneLoader _scenes;
-    private readonly ProfileSyncService _profile;
-    private bool _startingRun;
 
-    public HubMenuPresenter(HubMenuView view, FishingService fishing, QuestService quests, SceneLoader scenes,
-        ProfileSyncService profile)
+    public HubMenuPresenter(HubMenuView view, FishingService fishing, QuestService quests, SceneLoader scenes)
     {
         _view = view;
         _fishing = fishing;
         _quests = quests;
         _scenes = scenes;
-        _profile = profile;
     }
 
     public void Start()
     {
-        _view.SetNewbieMode(_profile.State.Player.MatchesPlayed == 0);
+        _view.SetFirstRunMode(_fishing.IsFirstRun);
         _view.GoFishingClicked += OnGoFishing;
         _quests.Changed += RefreshBadge;
         RefreshBadge();
@@ -35,11 +31,9 @@ public class HubMenuPresenter : IStartable, IDisposable
         _quests.Changed -= RefreshBadge;
     }
 
+    // A second click can't start a second load: the loading screen blocks input and SceneLoader ignores it.
     private void OnGoFishing()
     {
-        if (_startingRun) return;
-        _startingRun = true;
-        _view.SetGoFishingEnabled(false);
         _fishing.StartRun();
         _ = _scenes.LoadAsync(SceneNames.Fishing);
     }

@@ -22,10 +22,10 @@ public class GameState
     }
 }
 
-/// <summary>Currencies and the fish collection.</summary>
+/// <summary>Currencies, the fish collection and how many fishing runs were finished.</summary>
 public class PlayerState
 {
-    public int MatchesPlayed { get; set; }
+    public int RunsCompleted { get; set; }
     public int Gems { get; set; }
     public int LaunderedRubles { get; set; }
     public int DirtyRubles { get; set; }
