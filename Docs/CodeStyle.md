@@ -2,15 +2,38 @@
 
 A short list of what we do right now. It will change as the project grows. If something here gets in the way, discuss it and update this file.
 
+## Architecture
+
+**MVP** (Model-View-Presenter) with [VContainer](https://github.com/hadashiA/VContainer) for dependency injection. Unity stays at the edges: views, scopes and a few infrastructure services talk to the engine, the rest is plain C#.
+
+| Layer | Folder | What it does | Uses Unity |
+|---|---|---|---|
+| Model | `Model/` | Plain data: `GameConfig` (content from the server), `GameState` (the saved profile), `FishingSessionState` (one run) | No |
+| Domain services | `Services/Domain/` | Game rules: resources, upgrades, quests, fishing runs | No |
+| Infrastructure services | `Services/Infrastructure/` | Backend (`IApiClient`), saving, server time | Only to wrap a Unity API |
+| Presenters | `Hub/UI/`, `Fishing/UI/` | Listen to view and service events, decide what the view shows | No |
+| Views | `Hub/UI/`, `Fishing/UI/`, `App/` | MonoBehaviours with UI references: `Show…` methods, `…Clicked` events | Yes |
+| Scopes | `App/`, `Hub/`, `Fishing/` | `LifetimeScope`s that register services, views and presenters | Yes |
+
+- Services and presenters are plain C# classes that get their dependencies through the constructor. MonoBehaviours get services through an `[Inject]` method and scene objects through the Inspector.
+- A view has no game logic and doesn't know about services. Pure UI state (the open tab, a pulsing button) can stay in the view.
+- A presenter works with its view only through the view's methods and events, never through its GameObjects or components.
+- Only domain services change `GameState`. The service that finishes an action calls `ProfileSyncService.Save()` once.
+- Everything the backend owns goes through `IApiClient`.
+- New code that needs an engine API (time, scenes, app events, files) gets it from an infrastructure service instead of calling Unity directly.
+- Exception: the fishing minigame. Its rules run every frame on scene objects, so they live in `FishingController`, `Hook` and `Fish`, and `FishingHudPresenter` reads them directly.
+
 ## Naming
 
 | What | Style | Example |
 |---|---|---|
-| Classes, methods, properties, enums, events | `PascalCase` | `GameManager`, `StartRun()`, `HitsLeft` |
+| Classes, methods, properties, enums, events | `PascalCase` | `FishingService`, `StartRun()`, `HitsLeft` |
+| Interfaces | `IPascalCase` | `IApiClient` |
 | Private fields | `_camelCase` | `_caught`, `_slowdownLeft` |
 | Inspector fields | `camelCase` | `[SerializeField] private float sideSpeed` |
 | Local variables, parameters | `camelCase` | `var depth = ...` |
 
+- Classes are named after their role: `…Service`, `…View`, `…Presenter`, `…Scope`.
 - Methods that may fail return `bool` and start with `Try`: `TryBuy()`, `TryCatch()`.
 - Events are named after what happened: `FishShot`.
 
@@ -28,12 +51,13 @@ A short list of what we do right now. It will change as the project grows. If so
 - Braces on their own line, and always use them, even for one-line `if`s.
 - `var` when the type is obvious.
 - One-line members can use `=>`: `public bool IsFull => _caught.Count >= Capacity;`
-- Member order: fields → events → properties → Unity methods (`Awake`, `Update`...) → public methods → private methods.
+- Member order: fields → constructor → events → properties → Unity methods (`Awake`, `Update`...) → public methods → private methods.
 
 ## Files
 
 - One class per file, named after the class. Small enums or data classes used only by that class can stay in the same file.
-- `Scripts/` for gameplay, `Scripts/UI/` for UI, `Prefabs/`, `Scenes/`.
+- Folders in `Scripts/` follow the architecture: `App/` (startup, root scope, scene loading), `Model/`, `Services/Domain/`, `Services/Infrastructure/`, one folder per scene (`Hub/`, `Fishing/`) with its views and presenters in `UI/`, and `Editor/` for editor-only scripts.
+- `Prefabs/` uses the same `App/`, `Hub/`, `Fishing/` split.
 
 ## Comments
 
