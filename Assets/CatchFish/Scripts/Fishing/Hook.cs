@@ -10,7 +10,12 @@ public class Hook : MonoBehaviour
     [SerializeField] private float sideSpeed = 14f;
     [SerializeField] private float hitRadius = 0.3f;
     [SerializeField] private float catchRadius = 0.55f;
+
+    [Header("Line")]
+    [Tooltip("The rod tip the line hangs from, in world space: match it to the rod in Surface.prefab.")]
     [SerializeField] private Vector2 lineStart = new Vector2(0.6f, 0.9f);
+    [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.6f);
+    [SerializeField] private float lineWidth = 0.04f;
 
     private readonly List<Fish> _caught = new List<Fish>();
     private Transform _line;
@@ -22,11 +27,10 @@ public class Hook : MonoBehaviour
     public bool IsFull => _caught.Count >= Capacity;
     public float Depth => -transform.position.y;
 
+    // The hook's look is the HookVisual.prefab child in the scene; only the line is drawn here.
     private void Awake()
     {
-        // TODO: change creating hook sprite
-        Shapes.CreateBlock("Hook Visual", new Color(0.85f, 0.85f, 0.85f), new Vector2(0.25f, 0.4f), transform, 3);
-        _line = Shapes.CreateBlock("Fishing Line", new Color(1f, 1f, 1f, 0.6f), Vector2.one, null, 2).transform;
+        _line = Shapes.CreateBlock("Fishing Line", lineColor, Vector2.one, null, 2).transform;
     }
 
     private void LateUpdate()
@@ -35,7 +39,7 @@ public class Hook : MonoBehaviour
         Vector2 hookPosition = transform.position;
         var delta = hookPosition - lineStart;
         _line.position = (lineStart + hookPosition) * 0.5f;
-        _line.localScale = new Vector3(0.04f, delta.magnitude, 1f);
+        _line.localScale = new Vector3(lineWidth, delta.magnitude, 1f);
         _line.rotation = Quaternion.FromToRotation(Vector3.up, delta);
     }
 

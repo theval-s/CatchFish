@@ -7,8 +7,10 @@ using UnityEngine;
 public class FishSkin
 {
     public string fishId;
-    [Tooltip("Leave empty to keep the prefab's sprite.")]
+    [Tooltip("Drawn facing right. Set the image's Pixels Per Unit to its height in pixels: the fish config's size then sets " +
+             "how tall it is in the world. Leave empty for the placeholder square.")]
     public Sprite sprite;
+    [Tooltip("Tints the sprite; white shows the art as drawn.")]
     public Color color = Color.white;
 }
 

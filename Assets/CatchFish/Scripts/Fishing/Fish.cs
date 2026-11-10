@@ -50,14 +50,21 @@ public class Fish : MonoBehaviour
         _halfWidth = halfWidth;
         State = FishState.Swimming;
 
-        // TODO: drop the stretching once fish have real sprites
-        transform.localScale = new Vector3(type.Size * 1.5f, type.Size, 1f);
         var spriteRenderer = GetComponent<SpriteRenderer>();
         if (skin.sprite != null)
         {
+            // Real art keeps its own proportions (see FishSkin.sprite).
             spriteRenderer.sprite = skin.sprite;
+            transform.localScale = Vector3.one * type.Size;
+        }
+        else
+        {
+            // The placeholder square, stretched into a fish shape.
+            transform.localScale = new Vector3(type.Size * 1.5f, type.Size, 1f);
         }
 
+        // Art faces right; fish swimming left are mirrored.
+        spriteRenderer.flipX = _direction < 0f;
         spriteRenderer.color = skin.color;
     }
 
