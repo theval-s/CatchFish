@@ -1,0 +1,13 @@
+# systemd user service for the CatchFish server. Assumes the repo is cloned to ~/CatchFish.
+# Install: see "Deploying" in Server/README.md.
+
+[Unit]
+Description=CatchFish game server
+
+[Service]
+ExecStart=%h/CatchFish/Server/build/catchfish-server
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
