@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using VContainer.Unity;
 
-/// <summary>Shows the run summary once the results are saved and takes the player back to the hub.</summary>
+/// <summary>Shows the run summary once the backend has the results and takes the player back to the hub.</summary>
 public class FishingResultsPresenter : IStartable, IDisposable
 {
     private readonly FishingResultsView _view;
@@ -32,28 +32,32 @@ public class FishingResultsPresenter : IStartable, IDisposable
         _view.BackToHubClicked -= OnBackToHub;
     }
 
-    private void OnRunCompleted()
+    private void OnRunCompleted(bool saved)
     {
         var session = _fishing.Session;
-        _view.Show(session.DepthReached, session.Caught, session.Shot, session.Lost, session.Earnings,
-            DescribeCollected(session));
+        var collected = DescribeCollected(session);
+        if (!saved)
+        {
+            collected = "Not saved: the server didn't accept the run.\n" + collected;
+        }
+
+        _view.Show(session.DepthReached, session.Caught, session.Shot, session.Lost, session.Earnings, collected);
     }
 
     private void OnBackToHub() => _ = _scenes.LoadAsync(SceneNames.Hub);
 
     private string DescribeCollected(FishingSessionState session)
     {
-        if (session.CollectedFish.Count == 0)
+        var text = new StringBuilder();
+        foreach (var pair in session.ShotFish)
         {
-            return "";
+            var fish = _config.GetFish(pair.Key);
+            if (fish.IsCollectible)
+            {
+                text.Append($" {fish.Name} x{pair.Value}");
+            }
         }
 
-        var text = new StringBuilder("Collected:");
-        foreach (var pair in session.CollectedFish)
-        {
-            text.Append($" {_config.GetFish(pair.Key).Name} x{pair.Value}");
-        }
-
-        return text.ToString();
+        return text.Length > 0 ? "Collected:" + text : "";
     }
 }

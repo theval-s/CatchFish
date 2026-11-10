@@ -1,19 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 /// <summary>
-/// Open quests: checks if they can be completed with the player's resources,
-/// spends the resources on completion and opens the quests it unlocks.
+/// Open quests: checks if they can be completed with the player's resources
+/// and asks the backend to complete them.
 /// </summary>
 public class QuestService : IDisposable
 {
+    private readonly IApiClient _api;
     private readonly ConfigService _config;
     private readonly ProfileSyncService _profile;
     private readonly ResourceService _resources;
     private readonly List<QuestData> _active = new List<QuestData>();
 
-    public QuestService(ConfigService config, ProfileSyncService profile, ResourceService resources)
+    public QuestService(IApiClient api, ConfigService config, ProfileSyncService profile, ResourceService resources)
     {
+        _api = api;
         _config = config;
         _profile = profile;
         _resources = resources;
@@ -66,24 +69,14 @@ public class QuestService : IDisposable
 
     public bool CanComplete(QuestData quest) => Progress.Active.Contains(quest.Id) && _resources.Has(quest.Requirements);
 
-    public bool TryComplete(QuestData quest)
+    /// <summary>The backend spends the requirements and opens the quests this one unlocks.</summary>
+    public async Task<bool> TryCompleteAsync(QuestData quest)
     {
-        if (!Progress.Active.Contains(quest.Id) || !_resources.TrySpend(quest.Requirements))
+        if (!CanComplete(quest) || !await _profile.TryApplyAsync(_api.CompleteQuestAsync(quest.Id)))
         {
             return false;
         }
 
-        Progress.Active.Remove(quest.Id);
-        Progress.Completed.Add(quest.Id);
-        foreach (var id in quest.UnlocksId)
-        {
-            if (!Progress.Active.Contains(id) && !Progress.Completed.Contains(id))
-            {
-                Progress.Active.Add(id);
-            }
-        }
-
-        _profile.Save();
         Changed?.Invoke();
         return true;
     }

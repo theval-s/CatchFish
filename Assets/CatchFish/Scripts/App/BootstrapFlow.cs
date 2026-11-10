@@ -3,8 +3,8 @@ using UnityEngine;
 using VContainer.Unity;
 
 /// <summary>
-/// App startup: load the config, the player's profile and server time, prepare the state,
-/// then open the hub. Saving on exit is handled by <see cref="ProfileSyncService"/>.
+/// App startup: load the config, the player's profile and server time, then open the hub.
+/// Nothing is saved on exit: the backend saves every change as it happens.
 /// </summary>
 public class BootstrapFlow : IAsyncStartable
 {
@@ -27,7 +27,7 @@ public class BootstrapFlow : IAsyncStartable
         await _profile.LoadAsync();
         await _time.SyncAsync();
 
-        // TODO: add the school's income for the time the player was away (from State.SavedAt to _time.Now)
+        // TODO: the backend adds the school's income for the time the player was away when it sends the profile
 
         await _scenes.LoadAsync(SceneNames.Hub);
     }

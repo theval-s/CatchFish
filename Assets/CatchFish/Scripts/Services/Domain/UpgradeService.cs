@@ -1,14 +1,17 @@
 using System;
+using System.Threading.Tasks;
 
 /// <summary>Fishing gear upgrades, bought with dirty rubles.</summary>
 public class UpgradeService
 {
+    private readonly IApiClient _api;
     private readonly ConfigService _config;
     private readonly ProfileSyncService _profile;
     private readonly ResourceService _resources;
 
-    public UpgradeService(ConfigService config, ProfileSyncService profile, ResourceService resources)
+    public UpgradeService(IApiClient api, ConfigService config, ProfileSyncService profile, ResourceService resources)
     {
+        _api = api;
         _config = config;
         _profile = profile;
         _resources = resources;
@@ -29,15 +32,14 @@ public class UpgradeService
 
     public bool CanBuy(string gearId) => !IsMaxed(gearId) && _resources.Has(ResourceIds.DirtyRubles, NextCost(gearId));
 
-    public bool TryBuy(string gearId)
+    public async Task<bool> TryBuyAsync(string gearId)
     {
-        if (IsMaxed(gearId) || !_resources.TrySpend(ResourceIds.DirtyRubles, NextCost(gearId)))
+        // Checked here too, so a purchase that can't go through isn't sent to the backend.
+        if (!CanBuy(gearId) || !await _profile.TryApplyAsync(_api.BuyGearAsync(gearId)))
         {
             return false;
         }
 
-        _profile.State.Upgrades.GearLevels[gearId] = GetLevel(gearId) + 1;
-        _profile.Save();
         Changed?.Invoke();
         return true;
     }

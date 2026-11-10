@@ -29,6 +29,6 @@ public class FishingSessionState
     public int Lost { get; set; }
     public int Earnings { get; set; }
 
-    /// <summary>Collectible fish shot during the run: fish id → count.</summary>
-    public Dictionary<string, int> CollectedFish { get; } = new Dictionary<string, int>();
+    /// <summary>Fish shot during the run: fish id → count. Sent to the backend, which pays for them.</summary>
+    public Dictionary<string, int> ShotFish { get; } = new Dictionary<string, int>();
 }

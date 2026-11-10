@@ -3,69 +3,53 @@ using System.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// Owns the player's <see cref="GameState"/>: loads it at startup and sends it to the backend
-/// after every change. Domain services change the state, then call <see cref="Save"/> once.
+/// Holds the player's <see cref="GameState"/> as the backend last sent it. Domain services send an
+/// action through <see cref="IApiClient"/> and pass it to <see cref="TryApplyAsync"/>; nothing on the
+/// client changes the state itself, and there's nothing to save: the backend saves every change.
 /// </summary>
-public class ProfileSyncService : IDisposable
+public class ProfileSyncService
 {
     private readonly IApiClient _api;
-    private readonly ConfigService _config;
-    private readonly ServerTimeService _time;
 
-    public ProfileSyncService(IApiClient api, ConfigService config, ServerTimeService time)
+    public ProfileSyncService(IApiClient api)
     {
         _api = api;
-        _config = config;
-        _time = time;
-
-        Application.quitting += Save;
-        Application.focusChanged += OnFocusChanged;
     }
+
+    /// <summary>Raised when the backend sent a new profile.</summary>
+    public event Action StateChanged;
 
     public GameState State { get; private set; }
 
-    public void Dispose()
-    {
-        Application.quitting -= Save;
-        Application.focusChanged -= OnFocusChanged;
-    }
-
-    /// <summary>Needs the config to be loaded first: a new player starts from it.</summary>
     public async Task LoadAsync()
     {
-        State = await _api.LoadProfileAsync() ?? GameState.CreateNew(_config.Config);
+        State = await _api.LoadProfileAsync();
     }
 
-    public void Save()
-    {
-        if (State == null)
-        {
-            return;
-        }
-
-        State.SavedAt = _time.Now;
-        SaveAsync();
-    }
-
-    private async void SaveAsync()
+    /// <summary>
+    /// Waits for a backend action and takes the profile it returns. False if the backend refused
+    /// the action or couldn't be reached; the state then stays as it was.
+    /// </summary>
+    public async Task<bool> TryApplyAsync(Task<GameState> request)
     {
         try
         {
-            await _api.SaveProfileAsync(State);
+            State = await request;
+        }
+        catch (ApiException e)
+        {
+            // TODO: tell the player when the server can't be reached
+            Debug.LogWarning($"Backend: {e.Message}");
+            return false;
         }
         catch (Exception e)
         {
-            // TODO: retry and tell the player once there is a real server to lose connection to
+            // Callers fire and forget, so a bug here would otherwise go unnoticed.
             Debug.LogException(e);
+            return false;
         }
-    }
 
-    // On phones the app is often killed in the background without quitting.
-    private void OnFocusChanged(bool hasFocus)
-    {
-        if (!hasFocus)
-        {
-            Save();
-        }
+        StateChanged?.Invoke();
+        return true;
     }
 }

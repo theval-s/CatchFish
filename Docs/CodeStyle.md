@@ -8,9 +8,9 @@ A short list of what we do right now. It will change as the project grows. If so
 
 | Layer | Folder | What it does | Uses Unity |
 |---|---|---|---|
-| Model | `Model/` | Plain data: `GameConfig` (content from the server), `GameState` (the saved profile), `FishingSessionState` (one run) | No |
+| Model | `Model/` | Plain data: `GameConfig` (content from the server), `GameState` (the profile the server sends), `FishingSessionState` (one run) | No |
 | Domain services | `Services/Domain/` | Game rules: resources, upgrades, quests, fishing runs | No |
-| Infrastructure services | `Services/Infrastructure/` | Backend (`IApiClient`), saving, server time | Only to wrap a Unity API |
+| Infrastructure services | `Services/Infrastructure/` | Backend (`IApiClient`), the current profile, server time | Only to wrap a Unity API |
 | Presenters | `Hub/UI/`, `Fishing/UI/` | Listen to view and service events, decide what the view shows | No |
 | Views | `Hub/UI/`, `Fishing/UI/`, `App/` | MonoBehaviours with UI references: `Show…` methods, `…Clicked` events | Yes |
 | Scopes | `App/`, `Hub/`, `Fishing/` | `LifetimeScope`s that register services, views and presenters | Yes |
@@ -18,8 +18,9 @@ A short list of what we do right now. It will change as the project grows. If so
 - Services and presenters are plain C# classes that get their dependencies through the constructor. MonoBehaviours get services through an `[Inject]` method and scene objects through the Inspector.
 - A view has no game logic and doesn't know about services. Pure UI state (the open tab, a pulsing button) can stay in the view.
 - A presenter works with its view only through the view's methods and events, never through its GameObjects or components.
-- Only domain services change `GameState`. The service that finishes an action calls `ProfileSyncService.Save()` once.
-- Everything the backend owns goes through `IApiClient`.
+- Only the server changes `GameState`. A domain service checks what it can locally (to grey out buttons), sends the action through `IApiClient` and passes the call to `ProfileSyncService.TryApplyAsync`, which takes the profile the server returns.
+- Everything the backend owns goes through `IApiClient`. A new action means a new endpoint in `Server/` (and in `Server/README.md`), the same rule in `LocalApiClient`, and a method on `IApiClient`.
+- The server in `Server/` is C++ but follows the same naming and formatting; its model structs use camelCase fields to match the JSON.
 - New code that needs an engine API (time, scenes, app events, files) gets it from an infrastructure service instead of calling Unity directly.
 - Exception: the fishing minigame. Its rules run every frame on scene objects, so they live in `FishingController`, `Hook` and `Fish`, and `FishingHudPresenter` reads them directly.
 

@@ -68,12 +68,8 @@ public class FishingController : MonoBehaviour
 
     private void Start()
     {
-        // The hub starts the run before loading this scene.
+        // The hub starts the run on the backend before loading this scene.
         Session = _fishing.Session;
-        if (Session == null || Session.Phase == FishingPhase.Results)
-        {
-            Session = _fishing.StartRun();
-        }
 
         _slowdownLeft = 0f;
         _lineSpeed = Session.ReelSpeed * (Session.IsFirstRun ? firstRunLineSpeedMultiplier : 1f);
@@ -240,11 +236,8 @@ public class FishingController : MonoBehaviour
         var type = target.Type;
         Session.Shot++;
         Session.Earnings += type.Value;
-        if (type.IsCollectible)
-        {
-            Session.CollectedFish.TryGetValue(type.Id, out var count);
-            Session.CollectedFish[type.Id] = count + 1;
-        }
+        Session.ShotFish.TryGetValue(type.Id, out var count);
+        Session.ShotFish[type.Id] = count + 1;
 
         FishShot?.Invoke(target.Position, type.Value);
 
@@ -255,7 +248,7 @@ public class FishingController : MonoBehaviour
     private void FinishRun()
     {
         spawner.Clear();
-        _fishing.CompleteRun();
+        _ = _fishing.CompleteRunAsync();
     }
 
     // ---------- Input ----------

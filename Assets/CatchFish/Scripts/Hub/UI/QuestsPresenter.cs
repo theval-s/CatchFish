@@ -37,7 +37,7 @@ public class QuestsPresenter : IStartable, IDisposable
         {
             var item = _view.AddItem();
             item.Show(quest.Title, quest.Description, DescribeRequirements(quest), _quests.CanComplete(quest));
-            item.CompleteClicked += () => _quests.TryComplete(quest);
+            item.CompleteClicked += () => _ = _quests.TryCompleteAsync(quest);
         }
     }
 

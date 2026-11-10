@@ -8,6 +8,7 @@ public class HubMenuPresenter : IStartable, IDisposable
     private readonly FishingService _fishing;
     private readonly QuestService _quests;
     private readonly SceneLoader _scenes;
+    private bool _starting;
 
     public HubMenuPresenter(HubMenuView view, FishingService fishing, QuestService quests, SceneLoader scenes)
     {
@@ -31,11 +32,22 @@ public class HubMenuPresenter : IStartable, IDisposable
         _quests.Changed -= RefreshBadge;
     }
 
-    // A second click can't start a second load: the loading screen blocks input and SceneLoader ignores it.
-    private void OnGoFishing()
+    // Clicks are ignored while the backend starts the run; after that the loading screen blocks input.
+    private async void OnGoFishing()
     {
-        _fishing.StartRun();
-        _ = _scenes.LoadAsync(SceneNames.Fishing);
+        if (_starting)
+        {
+            return;
+        }
+
+        _starting = true;
+        var started = await _fishing.TryStartRunAsync();
+        _starting = false;
+
+        if (started)
+        {
+            _ = _scenes.LoadAsync(SceneNames.Fishing);
+        }
     }
 
     private void RefreshBadge() => _view.SetQuestsBadge(_quests.HasCompletable);

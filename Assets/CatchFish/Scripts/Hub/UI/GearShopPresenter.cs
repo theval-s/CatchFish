@@ -26,7 +26,7 @@ public class GearShopPresenter : IStartable, IDisposable
         {
             var gearId = gear.Id;
             var item = _view.AddItem();
-            item.BuyClicked += () => _upgrades.TryBuy(gearId);
+            item.BuyClicked += () => _ = _upgrades.TryBuyAsync(gearId);
             _items[gearId] = item;
         }
 
