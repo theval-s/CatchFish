@@ -110,6 +110,7 @@ public class FishingController : MonoBehaviour
         }
 
         hook.Move(-speed);
+        spawner.Swim(Time.deltaTime, hook.transform.position, true);
 
         foreach (var fish in spawner.AllFish)
         {
@@ -149,6 +150,7 @@ public class FishingController : MonoBehaviour
     {
         Steer();
         hook.Move(_lineSpeed * ascentSpeedMultiplier);
+        spawner.Swim(Time.deltaTime, hook.transform.position, true);
 
         foreach (var fish in spawner.AllFish)
         {
@@ -191,6 +193,7 @@ public class FishingController : MonoBehaviour
 
     private void UpdateShooting()
     {
+        spawner.Swim(Time.deltaTime, hook.transform.position, false);
         if (WasShootPressed(out var point))
         {
             Shoot(point);
@@ -228,7 +231,7 @@ public class FishingController : MonoBehaviour
             }
         }
 
-        if (target == null)
+        if (target == null || !target.TryShoot())
         {
             return;
         }
