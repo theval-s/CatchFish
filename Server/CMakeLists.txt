@@ -26,7 +26,12 @@ FetchContent_Declare(sqlite
     URL https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip
     URL_HASH SHA256=77823cb110929c2bcb0f5d48e4833b5c59a8a6e40cdea3936b99e199dbbe5784
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-FetchContent_MakeAvailable(httplib json sqlite)
+# Header-only SHA-256, for storing tokens and guest secrets as hashes.
+FetchContent_Declare(picosha2
+    URL https://github.com/okdshin/PicoSHA2/archive/refs/tags/v1.0.1.tar.gz
+    URL_HASH SHA256=9983136544234e573fe07cc1a22fdf978ad7979043e7be2e9082f6d4991ff8a8
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(httplib json sqlite picosha2)
 
 find_package(Threads REQUIRED)
 
@@ -36,13 +41,18 @@ target_link_libraries(sqlite3 PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
 
 add_executable(catchfish-server
     src/main.cpp
+    src/Accounts.cpp
+    src/Content.cpp
+    src/DevApi.cpp
+    src/GameApi.cpp
     src/GameRules.cpp
+    src/Http.cpp
     src/Storage.cpp
     src/TimeFormat.cpp)
-target_link_libraries(catchfish-server PRIVATE httplib::httplib nlohmann_json::nlohmann_json sqlite3)
+target_link_libraries(catchfish-server PRIVATE httplib::httplib nlohmann_json::nlohmann_json sqlite3 picosha2)
 target_compile_options(catchfish-server PRIVATE $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra>)
 
-# Defaults that work from any working directory: the client's config and a database next to this file.
+# Defaults that work from any working directory: the seed config and a database next to this file.
 target_compile_definitions(catchfish-server PRIVATE
-    CATCHFISH_DEFAULT_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/../Assets/CatchFish/Resources/LocalBackend/game_config.json"
+    CATCHFISH_DEFAULT_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/content/game_config.json"
     CATCHFISH_DEFAULT_DB="${CMAKE_CURRENT_SOURCE_DIR}/catchfish.db")

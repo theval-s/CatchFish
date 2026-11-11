@@ -5,6 +5,8 @@
 Description=CatchFish game server
 
 [Service]
+# CATCHFISH_DEV_KEY=… turns on the dev API; without the file the server runs with it off.
+EnvironmentFile=-%h/.config/catchfish.env
 ExecStart=%h/CatchFish/Server/build/catchfish-server
 Restart=on-failure
 RestartSec=5

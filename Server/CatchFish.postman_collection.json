@@ -1,0 +1,436 @@
+{
+  "info": {
+    "name": "CatchFish server",
+    "description": "The CatchFish server API (Server/README.md). Set baseUrl and devKey in the collection variables. 'Create guest' or 'Sign in as guest' stores the session the player requests use.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "devKey",
+      "value": ""
+    },
+    {
+      "key": "guestSecret",
+      "value": ""
+    },
+    {
+      "key": "sessionToken",
+      "value": ""
+    },
+    {
+      "key": "playerId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Player",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{sessionToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/config",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Server time",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/time",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Create guest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/guest",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "A new player. Saves guestSecret, sessionToken and playerId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.guestSecret) { pm.collectionVariables.set('guestSecret', body.guestSecret); }",
+                  "if (body.sessionToken) { pm.collectionVariables.set('sessionToken', body.sessionToken); }",
+                  "if (body.playerId) { pm.collectionVariables.set('playerId', String(body.playerId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as guest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/guest/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guestSecret\": \"{{guestSecret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.guestSecret) { pm.collectionVariables.set('guestSecret', body.guestSecret); }",
+                  "if (body.sessionToken) { pm.collectionVariables.set('sessionToken', body.sessionToken); }",
+                  "if (body.playerId) { pm.collectionVariables.set('playerId', String(body.playerId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/profile"
+          }
+        },
+        {
+          "name": "Claim daily reward",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/daily/claim",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Buy gear",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/gear/buy",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gearId\": \"lineLength\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Complete quest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/quests/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Start run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/runs/start",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Complete run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/runs/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"runId\": \"paste activeRun.id from Start run\",\n  \"shotFish\": { \"f1\": 2 }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "At least 2 s after Start run."
+          }
+        },
+        {
+          "name": "Sign out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dev",
+      "auth": {
+        "type": "apikey",
+        "apikey": [
+          {
+            "key": "key",
+            "value": "X-Dev-Key",
+            "type": "string"
+          },
+          {
+            "key": "value",
+            "value": "{{devKey}}",
+            "type": "string"
+          },
+          {
+            "key": "in",
+            "value": "header",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/dev/config"
+          }
+        },
+        {
+          "name": "Replace config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/dev/config",
+            "body": {
+              "mode": "raw",
+              "raw": "PASTE THE WHOLE CONFIG HERE (e.g. Server/content/game_config.json)",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Replaces the whole live config. The placeholder body is not JSON on purpose, so sending it unchanged is refused."
+          }
+        },
+        {
+          "name": "Replace daily track",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/dev/config/daily",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"utcOffsetHours\": 3,\n  \"days\": [\n    {\n      \"dr\": 50\n    },\n    {\n      \"dr\": 100\n    },\n    {\n      \"dr\": 150\n    },\n    {\n      \"f5\": 1\n    },\n    {\n      \"dr\": 250\n    },\n    {\n      \"gems\": 5\n    },\n    {\n      \"dr\": 400,\n      \"gems\": 10\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add or replace quest",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/dev/config/quests/4",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekend catch\",\n  \"description\": \"Bring three golden sturgeons.\",\n  \"requirements\": {\n    \"f5\": 3\n  },\n  \"unlocksId\": [],\n  \"autoStart\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The id comes from the path. autoStart opens it for every player who hasn't done it."
+          }
+        },
+        {
+          "name": "Delete quest",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/dev/config/quests/4"
+          }
+        },
+        {
+          "name": "List players",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/dev/players?limit=50"
+          }
+        },
+        {
+          "name": "Get player",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/dev/players/{{playerId}}"
+          }
+        },
+        {
+          "name": "Replace player",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/dev/players/{{playerId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "PASTE THE PROFILE FROM 'Get player' HERE, EDITED",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "GET the player, edit the JSON (e.g. daily.lastClaimDay to test the next day), PUT it back. The placeholder body is not JSON on purpose: an empty profile would wipe the player."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,49 +1,84 @@
 # CatchFish server
 
 The authoritative backend: it owns the game config and every player's profile. The client sends
-actions ("buy this gear", "complete this quest", "this run ended with these fish"); the server checks
-them against the config, changes the profile, saves it and returns it. The client never uploads a profile.
+actions ("buy this gear", "complete this quest", "this run ended with these fish", "claim today's reward");
+the server checks them against the config, changes the profile, saves it and returns it. The client never
+uploads a profile, and the game can't run without a server.
 
-C++17, [cpp-httplib](https://github.com/yhirose/cpp-httplib), [nlohmann/json](https://github.com/nlohmann/json)
-and SQLite. CMake downloads all three on the first configure, so all you need is CMake and a C++ compiler.
+C++17, [cpp-httplib](https://github.com/yhirose/cpp-httplib), [nlohmann/json](https://github.com/nlohmann/json),
+SQLite and [PicoSHA2](https://github.com/okdshin/PicoSHA2). CMake downloads all of them on the first configure,
+so all you need is CMake and a C++ compiler.
 
 | File | What it does |
 |-|-|
-| `src/main.cpp` | Options, HTTP routes, turning errors into responses |
-| `src/GameRules.cpp` | The rules below |
-| `src/Storage.cpp` | SQLite: one `players` row per player, the profile as JSON |
+| `src/main.cpp` | Options, the dev key, starting the HTTP server |
+| `src/GameApi.cpp` | Routes the game uses: sign-in, config, profile, player actions |
+| `src/DevApi.cpp` | `/dev/…` routes for the team: live config, players |
+| `src/GameRules.cpp` | The rules below, and checking a config before it goes live |
+| `src/Accounts.cpp` | Guest sign-in and sessions |
+| `src/Content.cpp` | The live config: loaded from the database, seeded from `content/game_config.json` |
+| `src/Storage.cpp` | SQLite tables and their migrations |
 | `src/Model.h` | C++ copies of the client's `GameConfig`, `GameState` and `RunResult` |
+| `content/game_config.json` | The config a new database starts with |
+| `CatchFish.postman_collection.json` | Every request, ready for Postman |
 
 ## Build and run
 
 ```bash
 cmake -S Server -B Server/build -DCMAKE_BUILD_TYPE=Release
 cmake --build Server/build
-Server/build/catchfish-server
+CATCHFISH_DEV_KEY=<a long random key> Server/build/catchfish-server
 ```
-
-Options:
 
 | Option | Default |
 |-|-|
 | `--host <address>` | `127.0.0.1`: only this machine (and Caddy on it) can connect. `0.0.0.0` accepts other devices directly, over plain HTTP |
 | `--port <n>` | `8080` |
-| `--config <path>` | `Assets/CatchFish/Resources/LocalBackend/game_config.json`, the same file the client's local mode uses |
-| `--db <path>` | `Server/catchfish.db` (delete it to wipe all players) |
+| `--db <path>` | `Server/catchfish.db` (delete it to wipe all players and the live config) |
+| `--config <path>` | `Server/content/game_config.json`. Read only when the database has no config yet |
 
-The config is read once at startup: restart the server after changing it.
+`CATCHFISH_DEV_KEY` (an environment variable, at least 16 characters) turns on the dev API. Without it every
+`/dev/…` request answers 404. Make one with `openssl rand -hex 32`. It's the only thing protecting the dev API.
 
 ## Connecting the client
 
-`RootScope.prefab` → **Backend**: tick **Use Server** and set **Server Url**.
+`RootScope.prefab` → **Backend** → **Server Url**:
 
-- The hosted server: `https://fish.thevals.ru:1337` (the default **Server Url**)
-- A server running on the same machine as the editor: `http://localhost:8080`
+- the hosted server: `https://fish.thevals.ru:1337` (the default);
+- a server on the same machine as the editor: `http://localhost:8080`.
 
 Android builds refuse plain `http://`, so builds always use the hosted address.
 
-With **Use Server** off, the game runs against `LocalApiClient`, a C# copy of these rules that keeps
-the profile in a file on the device. Keep both in sync when the rules change.
+## Accounts and sessions
+
+A **player** has **identities**, the ways they sign in, and **sessions**, the bearer token every game request
+carries. Today the only identity is a guest; Google sign-in would be another identity on the same player.
+
+1. On first launch the client calls `POST /auth/guest` and gets a `guestSecret` (kept on the device) and a session.
+2. On later launches it signs in with the secret: `POST /auth/guest/login` → a new session.
+3. Sessions last 30 days. On `session_expired` the client signs in again with the secret.
+4. If the server doesn't know the secret (`invalid_credentials`), the client does **not** quietly make a new player:
+   the startup screen says so and offers Retry or "Start as new player". A server started on the wrong database
+   would otherwise lose every player that connected to it.
+
+Guest secrets and session tokens are 256-bit random values. The database stores only their SHA-256, so a copy
+of it doesn't let anyone sign in.
+
+## Live config and the dev API
+
+The config lives in the database, not in a file the server reads at startup. `GET /config` serves the current
+one with a `version`, and the dev API changes it without a restart:
+
+- every change is checked as a whole (ids unique, every quest and resource id it mentions exists, the gear the
+  game needs is there, the daily track has at least one day) and refused with `invalid_config` and the reason
+  if anything is off; the config in use stays as it was;
+- each accepted change bumps `version`;
+- players pick up changes on their next request: a quest with `"autoStart": true` opens for everyone who hasn't
+  done it, and a deleted quest disappears from players' open quests. The client reads the config once at startup,
+  so it shows a change after a restart.
+
+Import `CatchFish.postman_collection.json` into Postman, then set the collection variables `baseUrl` and `devKey`.
+"Create guest" and "Sign in as guest" store the session for the player requests.
 
 ## Deploying (fish.thevals.ru)
 
@@ -70,16 +105,18 @@ phone ──https──▶ router :1337 ──▶ laptop: Caddy :1337 ──http
 sudo apt install build-essential cmake git
 git clone --filter=blob:none --sparse https://github.com/theval-s/CatchFish.git ~/CatchFish
 cd ~/CatchFish
-git sparse-checkout set Server Assets/CatchFish/Resources/LocalBackend
+git sparse-checkout set Server
 cmake -S Server -B Server/build -DCMAKE_BUILD_TYPE=Release
 cmake --build Server/build
 ```
 
-The sparse checkout only fetches the server and the game config, not the Unity project and its art.
+The sparse checkout only fetches the server, not the Unity project and its art.
 
-**3. Run it as a service**, so it starts at boot and restarts if it crashes:
+**3. The dev key, and the server as a service** that starts at boot and restarts if it crashes:
 
 ```bash
+echo "CATCHFISH_DEV_KEY=$(openssl rand -hex 32)" > ~/.config/catchfish.env
+chmod 600 ~/.config/catchfish.env
 mkdir -p ~/.config/systemd/user
 cp ~/CatchFish/Server/catchfish.service ~/.config/systemd/user/
 systemctl --user daemon-reload
@@ -117,62 +154,88 @@ If a firewall (ufw) is on, allow ports 80 and 1337.
 cd ~/CatchFish && git pull && cmake --build Server/build && systemctl --user restart catchfish
 ```
 
-The config is read at startup, so a config change needs the restart too. Players live in
-`~/CatchFish/Server/catchfish.db`: copy it while the service is stopped to back them up.
+The database is migrated on start (see Database). A changed `content/game_config.json` doesn't reach a
+running database: upload it with "Replace config" in Postman. Players and the live config live in
+`~/CatchFish/Server/catchfish.db`: copy it while the service is stopped to back it up.
 
 Anyone who finds the address can create guest players. That's fine for a course demo; the server caps request
-bodies at 64 KB.
+bodies at 256 KB.
 
 ## Docker
 
 An alternative to steps 2–3 above: `Server/Dockerfile` builds the server from source in a Debian 12 image.
-Run these from the repo root, since the image also takes the game config from `Assets/`:
+Run these from the repo root:
 
 ```bash
-docker build -f Server/Dockerfile -t catchfish-server .
-docker run -d --name catchfish --restart unless-stopped -p 127.0.0.1:8080:8080 -v catchfish-data:/data catchfish-server
+docker build -t catchfish-server Server
+docker run -d --name catchfish --restart unless-stopped -p 127.0.0.1:8080:8080 -v catchfish-data:/data --env-file ~/.config/catchfish.env catchfish-server
 ```
 
 - `127.0.0.1:8080` keeps the port off the network, and Caddy reaches it exactly as it reaches the native server.
   Without the `127.0.0.1:`, Docker opens 8080 to everyone and bypasses ufw.
-- Players live in the `catchfish-data` volume and survive rebuilds.
-- The config is baked into the image: after `git pull`, build again, then `docker rm -f catchfish` and run again.
-- Logs: `docker logs -f catchfish`.
+- Players and the live config live in the `catchfish-data` volume and survive rebuilds.
+- After `git pull`, build again, then `docker rm -f catchfish` and run again. Logs: `docker logs -f catchfish`.
 
 ## API
 
 JSON everywhere, camelCase field names, the same shapes as the client's `GameConfig` and `GameState`.
-Times are ISO 8601 UTC strings (`2026-11-03T12:00:00.000Z`).
+Times are ISO 8601 UTC strings (`2026-11-03T12:00:00.000Z`). Give every POST a body, `{}` at least:
+cpp-httplib waits 5 s for a body when there's no `Content-Length`.
 
-Everything except `/config`, `/time` and `/auth/guest` needs `Authorization: Bearer <token>`.
+Everything except `/config`, `/time` and `/auth/guest…` needs `Authorization: Bearer <sessionToken>`.
 
 | Method | Path | Body | Returns |
 |-|-|-|-|
-| `GET` | `/config` | | `GameConfig` |
+| `GET` | `/config` | | `GameConfig` with `version` |
 | `GET` | `/time` | | `{ "now": time }` |
-| `POST` | `/auth/guest` | | `{ "token": string }`: a new player with a new profile |
+| `POST` | `/auth/guest` | | `{ "guestSecret", "playerId", "sessionToken", "expiresAt" }`: a new player |
+| `POST` | `/auth/guest/login` | `{ "guestSecret": string }` | `{ "playerId", "sessionToken", "expiresAt" }` |
+| `POST` | `/auth/logout` | | `{}`; this session stops working |
 | `GET` | `/profile` | | `GameState` |
 | `POST` | `/gear/buy` | `{ "gearId": string }` | `GameState` |
 | `POST` | `/quests/complete` | `{ "questId": int }` | `GameState` |
 | `POST` | `/runs/start` | | `GameState` with `activeRun` set |
 | `POST` | `/runs/complete` | `{ "runId": string, "shotFish": { fishId: count } }` | `GameState` with `activeRun` null |
+| `POST` | `/daily/claim` | | `GameState` |
 
-Errors come back as `{ "error": code, "message": text }`:
+Dev API, every request with the header `X-Dev-Key: <key>`:
+
+| Method | Path | Body | What it does |
+|-|-|-|-|
+| `GET` | `/dev/config` | | The live config with its `version` |
+| `PUT` | `/dev/config` | the whole config | Replaces it |
+| `PUT` | `/dev/config/daily` | `{ "utcOffsetHours", "days": [ { resourceId: amount } ] }` | Replaces the daily track |
+| `PUT` | `/dev/config/quests/{id}` | a quest (its `id` comes from the path) | Adds the quest or replaces it |
+| `DELETE` | `/dev/config/quests/{id}` | | Removes it; refused while another quest or `startingQuests` points at it |
+| `GET` | `/dev/players?limit=50` | | Recently active players: id, dates, runs, `dr` |
+| `GET` | `/dev/players/{id}` | | Their `GameState` |
+| `PUT` | `/dev/players/{id}` | a `GameState` | Replaces it: GET, edit, PUT back |
+
+The config changes answer with the new config. Errors come back as `{ "error": code, "message": text }`:
 
 | Status | `error` | When |
 |-|-|-|
 | 400 | `bad_request` | Malformed JSON or a missing field |
 | 400 | `unknown_gear`, `unknown_quest`, `unknown_fish` | The id isn't in the config |
-| 400 | `invalid_run` | The run's results aren't possible with its gear (see below) |
-| 401 | `unauthorized` | No token, or the token isn't known (the client then registers again) |
+| 400 | `invalid_run` | The run's results aren't possible with its gear (see Rules) |
+| 400 | `invalid_config` | A dev change would break the config; `message` says how |
+| 401 | `unauthorized` | No session token, or an unknown one |
+| 401 | `session_expired` | The session is over 30 days old: sign in again |
+| 401 | `invalid_credentials` | No player has this guest secret |
+| 403 | `forbidden` | Wrong or missing `X-Dev-Key` |
+| 404 | `not_found` | Unknown path, player or quest; or the dev API is off |
 | 409 | `gear_maxed` | The gear is already at its max level |
 | 409 | `not_enough_resources` | The price or the quest's requirements aren't covered |
 | 409 | `quest_not_active` | The quest isn't open for this player |
 | 409 | `no_active_run` | `runId` isn't the player's current run |
+| 409 | `already_claimed` | Today's daily reward is already taken |
 
 ## Rules
 
-- **New player**: the profile starts with the config's `startingQuests` open, everything else at zero.
+- **New player**: the profile starts with the config's `startingQuests` and auto-start quests open,
+  everything else at zero.
+- **Every request with a profile** first brings it up to date with the config: auto-start quests the player
+  hasn't done are opened, open quests that no longer exist are dropped.
 - **Buy gear**: the level must be below `maxLevel` and `dr` must cover `baseCost * costGrowth^level`.
   Spends `dr`, raises the level.
 - **Complete quest**: the quest must be active and every requirement covered. Spends the requirements,
@@ -186,3 +249,20 @@ Errors come back as `{ "error": code, "message": text }`:
   - every fish exists, and no deeper than the line could reach (5 m margin);
   - no more fish than the hook's capacity;
   - the run lasted at least 2 seconds.
+- **Daily reward**: one claim per calendar day, where the day starts at midnight `utcOffsetHours` from UTC
+  (+3 = Moscow). The claim gives `days[daily.nextDay]` and moves `nextDay` on; after the last day it goes back
+  to the first. Missed days cost nothing: the next claim gives the next day in the track. If the track gets
+  shorter, `nextDay` wraps around it.
+
+## Database
+
+| Table | Rows |
+|-|-|
+| `players` | `id`, `profile` (the `GameState` as JSON), `created_at`, `updated_at` |
+| `identities` | `provider` (`guest`; later `google`), `subject` (for a guest: the SHA-256 of the secret), `player_id` |
+| `sessions` | `token_hash` (SHA-256), `player_id`, `created_at`, `expires_at`; expired ones are deleted at sign-in |
+| `content` | One row: the live config as JSON and its `version` |
+
+`PRAGMA user_version` holds the schema version, and `Storage::Migrate` upgrades older databases on start.
+Version 1 came from the first server, where a token in `players` was the whole account: each token became a
+guest secret, so clients that kept it still sign in (the client moves its old `CatchFish.ServerToken` over).

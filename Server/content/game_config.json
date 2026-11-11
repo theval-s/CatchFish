@@ -37,5 +37,17 @@
     { "id": "lineDurability", "title": "Sinker durability", "unit": " hits",  "maxLevel": 5,  "baseCost": 150, "costGrowth": 2.0,  "baseValue": 0,  "valuePerLevel": 1 },
     { "id": "hookCapacity",   "title": "Hook capacity",     "unit": " fish",  "maxLevel": 10, "baseCost": 80,  "costGrowth": 1.55, "baseValue": 6,  "valuePerLevel": 3 },
     { "id": "reelSpeed",      "title": "Reel speed",        "unit": " m/s",   "maxLevel": 8,  "baseCost": 100, "costGrowth": 1.7,  "baseValue": 7,  "valuePerLevel": 1.5 }
-  ]
+  ],
+  "dailyRewards": {
+    "utcOffsetHours": 3,
+    "days": [
+      { "dr": 50 },
+      { "dr": 100 },
+      { "dr": 150 },
+      { "f5": 1 },
+      { "dr": 250 },
+      { "gems": 5 },
+      { "dr": 400, "gems": 10 }
+    ]
+  }
 }

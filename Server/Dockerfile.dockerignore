@@ -1,5 +1,0 @@
-# The build context is the whole repo (for the game config); send Docker only what the image uses.
-*
-!Server/CMakeLists.txt
-!Server/src
-!Assets/CatchFish/Resources/LocalBackend/game_config.json

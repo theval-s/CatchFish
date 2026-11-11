@@ -9,7 +9,7 @@
 
 // Mirrors of the client's Model/ classes. Field names match the JSON, so they're camelCase.
 
-// ---------- Config: only the fields the rules need; /config sends the whole file as it is ----------
+// ---------- Config: only the fields the rules need; /config sends the whole JSON as stored ----------
 
 struct FishType
 {
@@ -24,6 +24,8 @@ struct QuestData
     int id = 0;
     std::map<std::string, int> requirements;
     std::vector<int> unlocksId;
+    // Opened for every player who hasn't done it, not only through startingQuests or unlocksId.
+    bool autoStart = false;
 };
 
 struct GearUpgradeData
@@ -37,18 +39,29 @@ struct GearUpgradeData
     float valuePerLevel = 0;
 };
 
+/// One reward per login day; after the last day the track starts over.
+struct DailyRewardTrack
+{
+    // Where the server's calendar day starts: +3 = midnight in Moscow.
+    int utcOffsetHours = 3;
+    // Resource id → amount, one map per day.
+    std::vector<std::map<std::string, int>> days;
+};
+
 struct GameConfig
 {
     std::vector<FishType> fish;
     std::vector<QuestData> quests;
     std::vector<int> startingQuests;
     std::vector<GearUpgradeData> gear;
+    DailyRewardTrack dailyRewards;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(FishType, id, value, minDepth, isCollectible)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(QuestData, id, requirements, unlocksId)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(QuestData, id, requirements, unlocksId, autoStart)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GearUpgradeData, id, maxLevel, baseCost, costGrowth, baseValue, valuePerLevel)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameConfig, fish, quests, startingQuests, gear)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DailyRewardTrack, utcOffsetHours, days)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameConfig, fish, quests, startingQuests, gear, dailyRewards)
 
 // ---------- Profile: the server owns it, so every field is here ----------
 
@@ -81,11 +94,20 @@ struct ActiveRunState
     int capacity = 0;
 };
 
+struct DailyRewardState
+{
+    // Index of the next reward in the track.
+    int nextDay = 0;
+    // Calendar day of the last claim (days since 1970 in the track's time zone); -1 = never.
+    int lastClaimDay = -1;
+};
+
 struct GameState
 {
     PlayerState player;
     QuestProgressState quests;
     UpgradeProgressState upgrades;
+    DailyRewardState daily;
     std::optional<ActiveRunState> activeRun;
     std::string savedAt;
 };
@@ -94,6 +116,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(PlayerState, runsCompleted, gems
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(QuestProgressState, active, completed)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(UpgradeProgressState, gearLevels)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ActiveRunState, id, startedAt, maxDepth, capacity)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DailyRewardState, nextDay, lastClaimDay)
 
 // Written by hand for the optional activeRun, which is null between runs.
 inline void to_json(nlohmann::json& json, const GameState& state)
@@ -102,6 +125,7 @@ inline void to_json(nlohmann::json& json, const GameState& state)
         {"player", state.player},
         {"quests", state.quests},
         {"upgrades", state.upgrades},
+        {"daily", state.daily},
         {"activeRun", state.activeRun ? nlohmann::json(*state.activeRun) : nlohmann::json(nullptr)},
         {"savedAt", state.savedAt},
     };
@@ -112,6 +136,7 @@ inline void from_json(const nlohmann::json& json, GameState& state)
     state.player = json.value("player", PlayerState{});
     state.quests = json.value("quests", QuestProgressState{});
     state.upgrades = json.value("upgrades", UpgradeProgressState{});
+    state.daily = json.value("daily", DailyRewardState{});
     state.savedAt = json.value("savedAt", "");
 
     const auto run = json.find("activeRun");
