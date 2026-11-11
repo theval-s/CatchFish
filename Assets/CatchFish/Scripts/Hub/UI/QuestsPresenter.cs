@@ -51,23 +51,9 @@ public class QuestsPresenter : IStartable, IDisposable
                 text.Append('\n');
             }
 
-            text.Append($"{ResourceName(pair.Key)}: {_resources.Get(pair.Key)} / {pair.Value}");
+            text.Append($"{ResourceNames.Get(pair.Key, _config)}: {_resources.Get(pair.Key)} / {pair.Value}");
         }
 
         return text.ToString();
-    }
-
-    private string ResourceName(string id)
-    {
-        switch (id)
-        {
-            case ResourceIds.DirtyRubles: return "Dirty rubles";
-            case ResourceIds.LaunderedRubles: return "Laundered rubles";
-            case ResourceIds.Reputation: return "Reputation";
-            case ResourceIds.Gems: return "Gems";
-        }
-
-        var fish = _config.GetFish(id);
-        return fish != null ? fish.Name : id;
     }
 }

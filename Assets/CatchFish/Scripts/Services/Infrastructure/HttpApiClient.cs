@@ -6,30 +6,57 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 /// <summary>
-/// Talks to the C++ server in Server/ over HTTP + JSON (the API is in Server/README.md).
-/// Signs in as a guest the first time and keeps the token in PlayerPrefs.
+/// Talks to the C++ server in Server/ over HTTP + JSON (the API is in Server/README.md). Signs in as
+/// this device's guest: the guest secret is kept in PlayerPrefs, the session only in memory.
 /// </summary>
 public class HttpApiClient : IApiClient
 {
-    private const string TokenKey = "CatchFish.ServerToken";
+    private const string GuestSecretKey = "CatchFish.GuestSecret";
+    // Where the first server version's token was kept; that server turned it into a guest secret.
+    private const string OldTokenKey = "CatchFish.ServerToken";
     private const int TimeoutSeconds = 10;
 
     private readonly string _baseUrl;
+    private string _session;
 
     public HttpApiClient(string baseUrl)
     {
         _baseUrl = baseUrl.TrimEnd('/');
     }
 
-    private static string Token
+    private static string GuestSecret
     {
-        get => PlayerPrefs.GetString(TokenKey, "");
+        get => PlayerPrefs.GetString(GuestSecretKey, "");
         set
         {
-            PlayerPrefs.SetString(TokenKey, value);
+            PlayerPrefs.SetString(GuestSecretKey, value);
             PlayerPrefs.Save();
         }
     }
+
+    public async Task SignInAsync()
+    {
+        TakeOverOldToken();
+        if (string.IsNullOrEmpty(GuestSecret))
+        {
+            await CreateGuestAsync();
+            return;
+        }
+
+        try
+        {
+            var body = await SendAsync("POST", "/auth/guest/login", new { guestSecret = GuestSecret }, null);
+            _session = Json.Deserialize<SessionResponse>(body).SessionToken;
+        }
+        catch (ApiException e) when (e.Code == "invalid_credentials")
+        {
+            // Not replaced with a new guest here: if the server is just pointed at the wrong
+            // database, that would lose this player for good. The player decides (BootstrapFlow).
+            throw new ApiException(ApiException.AccountNotFound, "the server doesn't know this device's player");
+        }
+    }
+
+    public Task StartNewPlayerAsync() => CreateGuestAsync();
 
     public async Task<GameConfig> LoadConfigAsync() =>
         Json.Deserialize<GameConfig>(await SendAsync("GET", "/config", null, null));
@@ -50,31 +77,52 @@ public class HttpApiClient : IApiClient
     public Task<GameState> CompleteRunAsync(RunResult result) =>
         SendSignedInAsync<GameState>("POST", "/runs/complete", result);
 
+    public Task<GameState> ClaimDailyRewardAsync() => SendSignedInAsync<GameState>("POST", "/daily/claim");
+
     private async Task<T> SendSignedInAsync<T>(string method, string path, object body = null)
     {
-        if (string.IsNullOrEmpty(Token))
+        if (_session == null)
         {
             await SignInAsync();
         }
 
         try
         {
-            return Json.Deserialize<T>(await SendAsync(method, path, body, Token));
+            return Json.Deserialize<T>(await SendAsync(method, path, body, _session));
         }
-        catch (ApiException e) when (e.Code == "unauthorized")
+        catch (ApiException e) when (e.Code == "session_expired" || e.Code == "unauthorized")
         {
-            Debug.LogWarning("The server doesn't know this player (was its database deleted?). Starting as a new player.");
+            // Sessions run out after 30 days (or the server forgot them): the guest secret gets a new one.
+            _session = null;
             await SignInAsync();
-            return Json.Deserialize<T>(await SendAsync(method, path, body, Token));
+            return Json.Deserialize<T>(await SendAsync(method, path, body, _session));
         }
     }
 
-    private async Task SignInAsync()
+    private async Task CreateGuestAsync()
     {
-        Token = Json.Deserialize<TokenResponse>(await SendAsync("POST", "/auth/guest", null, null)).Token;
+        var guest = Json.Deserialize<GuestResponse>(await SendAsync("POST", "/auth/guest", null, null));
+        GuestSecret = guest.GuestSecret;
+        _session = guest.SessionToken;
     }
 
-    private async Task<string> SendAsync(string method, string path, object body, string token)
+    private static void TakeOverOldToken()
+    {
+        if (!PlayerPrefs.HasKey(OldTokenKey))
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(GuestSecret))
+        {
+            GuestSecret = PlayerPrefs.GetString(OldTokenKey);
+        }
+
+        PlayerPrefs.DeleteKey(OldTokenKey);
+        PlayerPrefs.Save();
+    }
+
+    private async Task<string> SendAsync(string method, string path, object body, string session)
     {
         var url = _baseUrl + path;
         using (var request = new UnityWebRequest(url, method))
@@ -91,9 +139,9 @@ public class HttpApiClient : IApiClient
                 request.SetRequestHeader("Content-Type", "application/json");
             }
 
-            if (token != null)
+            if (session != null)
             {
-                request.SetRequestHeader("Authorization", "Bearer " + token);
+                request.SetRequestHeader("Authorization", "Bearer " + session);
             }
 
             await request.SendWebRequest();
@@ -105,7 +153,7 @@ public class HttpApiClient : IApiClient
                 case UnityWebRequest.Result.ProtocolError:
                     throw ToApiException(request);
                 default:
-                    throw new ApiException("connection_error", $"{method} {url}: {request.error}");
+                    throw new ApiException(ApiException.ConnectionError, $"{method} {url}: {request.error}");
             }
         }
     }
@@ -134,9 +182,16 @@ public class HttpApiClient : IApiClient
         public DateTime Now { get; set; }
     }
 
-    private class TokenResponse
+    private class SessionResponse
     {
-        public string Token { get; set; }
+        public long PlayerId { get; set; }
+        public string SessionToken { get; set; }
+        public DateTime ExpiresAt { get; set; }
+    }
+
+    private class GuestResponse : SessionResponse
+    {
+        public string GuestSecret { get; set; }
     }
 
     private class ErrorResponse

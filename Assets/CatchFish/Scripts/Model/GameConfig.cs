@@ -2,15 +2,19 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// Game content shared by all players. Comes from the server so it can be changed
+/// Game content shared by all players. Lives on the server, where the dev API can change it
 /// without a client update; read-only on the client.
 /// </summary>
 public class GameConfig
 {
+    /// <summary>Goes up with every change made through the dev API.</summary>
+    public int Version { get; set; }
+
     public List<FishType> Fish { get; set; } = new List<FishType>();
     public List<QuestData> Quests { get; set; } = new List<QuestData>();
     public List<int> StartingQuests { get; set; } = new List<int>();
     public List<GearUpgradeData> Gear { get; set; } = new List<GearUpgradeData>();
+    public DailyRewardTrack DailyRewards { get; set; } = new DailyRewardTrack();
 }
 
 /// <summary>One kind of fish.</summary>
@@ -49,6 +53,19 @@ public class QuestData
 
     /// <summary>Quests added to the player after this one is completed.</summary>
     public List<int> UnlocksId { get; set; } = new List<int>();
+
+    /// <summary>The server opens it for every player who hasn't done it, not only through unlocks.</summary>
+    public bool AutoStart { get; set; }
+}
+
+/// <summary>One reward per login day; after the last day the track starts over. Missed days cost nothing.</summary>
+public class DailyRewardTrack
+{
+    /// <summary>Where the server's calendar day starts: +3 = midnight in Moscow.</summary>
+    public int UtcOffsetHours { get; set; }
+
+    /// <summary>One reward per day: resource id → amount.</summary>
+    public List<Dictionary<string, int>> Days { get; set; } = new List<Dictionary<string, int>>();
 }
 
 /// <summary>One fishing gear upgrade track: value grows linearly, price grows exponentially.</summary>

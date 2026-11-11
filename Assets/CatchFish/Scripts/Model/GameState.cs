@@ -10,19 +10,13 @@ public class GameState
     public PlayerState Player { get; set; } = new PlayerState();
     public QuestProgressState Quests { get; set; } = new QuestProgressState();
     public UpgradeProgressState Upgrades { get; set; } = new UpgradeProgressState();
+    public DailyRewardState Daily { get; set; } = new DailyRewardState();
 
     /// <summary>The fishing run the backend expects results for, or null.</summary>
     public ActiveRunState ActiveRun { get; set; }
 
     /// <summary>Server time of the last change.</summary>
     public DateTime SavedAt { get; set; }
-
-    public static GameState CreateNew(GameConfig config)
-    {
-        var state = new GameState();
-        state.Quests.Active.AddRange(config.StartingQuests);
-        return state;
-    }
 }
 
 /// <summary>Currencies, the fish collection and how many fishing runs were finished.</summary>
@@ -107,4 +101,14 @@ public class ActiveRunState
     // Gear at the start of the run: the results can't go deeper or hold more fish than this.
     public float MaxDepth { get; set; }
     public int Capacity { get; set; }
+}
+
+/// <summary>Where the player is in the daily reward track.</summary>
+public class DailyRewardState
+{
+    /// <summary>Index of the reward the next claim gives.</summary>
+    public int NextDay { get; set; }
+
+    /// <summary>Server calendar day of the last claim (days since 1970); -1 = never.</summary>
+    public int LastClaimDay { get; set; } = -1;
 }

@@ -2,16 +2,23 @@ using System;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Everything the client asks the backend for. The backend owns the profile: every action returns
-/// the updated <see cref="GameState"/>, or throws <see cref="ApiException"/> if it was refused.
-/// <see cref="HttpApiClient"/> talks to the server in Server/, <see cref="LocalApiClient"/> runs the
-/// same rules on the device; <see cref="RootScope"/> picks one.
+/// Everything the client asks the server in Server/ for (the API is in Server/README.md). The server
+/// owns the profile: every action returns the updated <see cref="GameState"/>, or throws
+/// <see cref="ApiException"/> if it was refused.
 /// </summary>
 public interface IApiClient
 {
+    /// <summary>
+    /// Signs in as this device's guest, creating one on the first launch. Throws
+    /// <see cref="ApiException.AccountNotFound"/> if the server doesn't know the stored guest.
+    /// </summary>
+    Task SignInAsync();
+
+    /// <summary>Forgets this device's guest and signs in as a new player.</summary>
+    Task StartNewPlayerAsync();
+
     Task<GameConfig> LoadConfigAsync();
 
-    /// <summary>Creates the profile for a player who has never played.</summary>
     Task<GameState> LoadProfileAsync();
 
     Task<DateTime> GetServerTimeAsync();
@@ -24,4 +31,6 @@ public interface IApiClient
     Task<GameState> StartRunAsync();
 
     Task<GameState> CompleteRunAsync(RunResult result);
+
+    Task<GameState> ClaimDailyRewardAsync();
 }

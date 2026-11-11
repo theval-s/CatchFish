@@ -19,7 +19,7 @@ A short list of what we do right now. It will change as the project grows. If so
 - A view has no game logic and doesn't know about services. Pure UI state (the open tab, a pulsing button) can stay in the view.
 - A presenter works with its view only through the view's methods and events, never through its GameObjects or components.
 - Only the server changes `GameState`. A domain service checks what it can locally (to grey out buttons), sends the action through `IApiClient` and passes the call to `ProfileSyncService.TryApplyAsync`, which takes the profile the server returns.
-- Everything the backend owns goes through `IApiClient`. A new action means a new endpoint in `Server/` (and in `Server/README.md`), the same rule in `LocalApiClient`, and a method on `IApiClient`.
+- Everything the backend owns goes through `IApiClient`. A new action means a new endpoint in `Server/` (and in `Server/README.md` and the Postman collection) and a method on `IApiClient`. The rule itself lives only on the server.
 - The server in `Server/` is C++ but follows the same naming and formatting; its model structs use camelCase fields to match the JSON.
 - New code that needs an engine API (time, scenes, app events, files) gets it from an infrastructure service instead of calling Unity directly.
 - Exception: the fishing minigame. Its rules run every frame on scene objects, so they live in `FishingController`, `Hook` and `Fish`, and `FishingHudPresenter` reads them directly.
