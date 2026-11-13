@@ -29,6 +29,7 @@ public class FishingController : MonoBehaviour
     [SerializeField] private float gravity = -5f;
     [SerializeField] private float launchSpeedMin = 6f;
     [SerializeField] private float launchSpeedMax = 12f;
+    [Tooltip("Horizontal spread over the flight, applied as velocity so fish leave the hook without teleporting.")]
     [SerializeField] private float launchSpreadX = 1.2f;
     [SerializeField] private float shotRadius = 0.45f;
 
@@ -181,10 +182,13 @@ public class FishingController : MonoBehaviour
         _airborne.Clear();
         foreach (var fish in hook.Caught)
         {
-            var limit = spawner.HalfWidth - fish.Radius;
-            var x = Mathf.Clamp(hook.transform.position.x + Random.Range(-launchSpreadX, launchSpreadX), -limit, limit);
-            var velocity = new Vector2(Random.Range(-0.3f, 0.3f), Random.Range(launchSpeedMin, launchSpeedMax));
-            fish.Launch(new Vector2(x, 0f), velocity, _fishGravity);
+            var from = fish.Position;
+            var speed = Random.Range(launchSpeedMin, launchSpeedMax);
+            var flightSeconds = 2f * speed / Mathf.Max(0.01f, -_fishGravity);
+            var limit = Mathf.Max(0f, spawner.HalfWidth - fish.Radius);
+            var targetX = Mathf.Clamp(from.x + Random.Range(-launchSpreadX, launchSpreadX), -limit, limit);
+            var velocity = new Vector2((targetX - from.x) / flightSeconds, speed);
+            fish.Launch(from, velocity, _fishGravity);
             _airborne.Add(fish);
         }
 

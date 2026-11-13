@@ -16,40 +16,66 @@ MonoBehaviour:
     fishId: 
     sprite: {fileID: 0}
     color: {r: 1, g: 0, b: 1, a: 1}
+    mouthPosition: {x: 0.9, y: 0.5}
+    headUpAngle: 90
   skins:
   - fishId: f1
     sprite: {fileID: 21300000, guid: 7aecbbc17ecc1ca2faa59e57abecf791, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.90625, y: 0.421875}
+    headUpAngle: 90
   - fishId: f2
     sprite: {fileID: 21300000, guid: 2c7206e8bf05233d6ca21c5026ae2122, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.82291667, y: 0.421875}
+    headUpAngle: 90
   - fishId: f3
     sprite: {fileID: 21300000, guid: 978f903e872aadcde4bbaa19b5aa3789, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.88541667, y: 0.421875}
+    headUpAngle: 90
   - fishId: f4
     sprite: {fileID: 21300000, guid: 76bc5540ebe224df0c71c77e955a4f79, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.94375, y: 0.52083333}
+    headUpAngle: 90
   - fishId: f5
     sprite: {fileID: 21300000, guid: f7bb681c087b286c2ed1034def186eb5, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.9296875, y: 0.4375}
+    headUpAngle: 90
   - fishId: f6
     sprite: {fileID: 21300000, guid: 9736ef01c7e5cbefd98d30a254bde6d0, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.515625, y: 0.53125}
+    headUpAngle: 0
   - fishId: f7
     sprite: {fileID: 21300000, guid: 764d1092a74a3d698d0aa69425a08dac, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.9140625, y: 0.36458333}
+    headUpAngle: 90
   - fishId: f8
     sprite: {fileID: 21300000, guid: 6cd93d8a67bc1d17ec418786119d9552, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.94270833, y: 0.515625}
+    headUpAngle: 90
   - fishId: f9
     sprite: {fileID: 21300000, guid: 9e33f52a7926b91d3f57f1112f88221b, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.8375, y: 0.4625}
+    headUpAngle: 90
   - fishId: f10
     sprite: {fileID: 21300000, guid: 81d143a1a04902652f53f67b5d62db0e, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.88392857, y: 0.4125}
+    headUpAngle: 90
   - fishId: f11
     sprite: {fileID: 21300000, guid: 5d9c65635b4beed6163de54a845cdc74, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.9296875, y: 0.42708333}
+    headUpAngle: 90
   - fishId: f12
     sprite: {fileID: 21300000, guid: 2d7fddfae547616c6644ab1b87d0a904, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
+    mouthPosition: {x: 0.79464286, y: 0.44791667}
+    headUpAngle: 90

@@ -14,6 +14,24 @@ public enum FishState
 [RequireComponent(typeof(SpriteRenderer))]
 public class Fish : MonoBehaviour
 {
+    [Header("Hooked pose")]
+    [Tooltip("Seconds to ease into the hanging pose and react to hook movement.")]
+    [SerializeField] private float hookedSmoothTime = 0.35f;
+    [Tooltip("Maximum randomized resting tilt away from head-up, in degrees.")]
+    [SerializeField] private float restingTilt = 10f;
+    [Tooltip("Gentle sway amplitude in degrees; each fish has its own phase and frequency.")]
+    [SerializeField] private float swayAngle = 5f;
+    [Tooltip("Sway frequency range in cycles per second.")]
+    [SerializeField] private Vector2 swayFrequency = new Vector2(0.4f, 0.7f);
+    [Tooltip("Degrees of trailing lean per world unit per second of horizontal hook movement.")]
+    [SerializeField] private float dragLean = 4f;
+    [Tooltip("Maximum trailing lean in degrees.")]
+    [SerializeField] private float maxDragLean = 23f;
+
+    [Header("Airborne pose")]
+    [Tooltip("Angular speed range in degrees per second; direction is chosen once per launch.")]
+    [SerializeField] private Vector2 tumbleSpeed = new Vector2(25f, 55f);
+
     private float _direction;
     private float _halfWidth;
     private Vector2 _velocity;
@@ -31,6 +49,17 @@ public class Fish : MonoBehaviour
     private float _wrapSpan;
     private float _radiusScale = 1f;
     private float _damageFlash;
+    private Vector2 _mouthPosition;
+    private float _headUpAngle;
+    private Transform _hook;
+    private Vector3 _hookOffset;
+    private Vector3 _previousHookPosition;
+    private float _hookedAngle;
+    private float _hookedAngleVelocity;
+    private float _restingAngle;
+    private float _swayPhase;
+    private float _swayFrequency;
+    private float _angularVelocity;
 
     public FishType Type { get; private set; }
     public FishState State { get; private set; }
@@ -48,10 +77,15 @@ public class Fish : MonoBehaviour
     {
         if (State == FishState.Airborne)
         {
-            Fly();
+            Fly(Time.deltaTime);
             _damageFlash = Mathf.Max(0f, _damageFlash - Time.deltaTime);
             ApplyDamageVisual();
         }
+    }
+
+    private void LateUpdate()
+    {
+        UpdateHookedPose(Time.deltaTime);
     }
 
     public void Init(FishType type, FishSkin skin, float direction, float halfWidth,
@@ -68,6 +102,17 @@ public class Fish : MonoBehaviour
         _gravity = 0f;
         _damageFlash = 0f;
         _radiusScale = 1f;
+        _hook = null;
+        _hookOffset = Vector3.zero;
+        _previousHookPosition = Vector3.zero;
+        _hookedAngle = 0f;
+        _hookedAngleVelocity = 0f;
+        _restingAngle = 0f;
+        _swayPhase = 0f;
+        _swayFrequency = 0f;
+        _angularVelocity = 0f;
+        _mouthPosition = skin.MouthPosition;
+        _headUpAngle = skin.HeadUpAngle;
         behavior = behavior ?? new FishBehaviorSettings();
         _armor.Reset(behavior.AirborneHits);
         _swimming.Reset(behavior, _direction, () => Random.value);
@@ -107,6 +152,7 @@ public class Fish : MonoBehaviour
 
         // Art faces right; fish swimming left are mirrored.
         _renderer.flipX = _direction < 0f;
+        _renderer.flipY = false;
         _baseScale = transform.localScale;
         _baseColor = skin.color;
         _renderer.color = _baseColor;
@@ -121,8 +167,21 @@ public class Fish : MonoBehaviour
     {
         CancelSwimming();
         State = FishState.Hooked;
+        _hook = hook;
+        _hookOffset = localOffset;
+        _previousHookPosition = hook.TransformPoint(localOffset);
+        _hookedAngle = transform.eulerAngles.z;
+        _hookedAngleVelocity = 0f;
+        var headUp = _renderer.flipX ? -_headUpAngle : _headUpAngle;
+        if (_renderer.flipY)
+        {
+            headUp = 180f - headUp;
+        }
+        _restingAngle = headUp + Random.Range(-restingTilt, restingTilt);
+        _swayPhase = Random.Range(0f, Mathf.PI * 2f);
+        _swayFrequency = Random.Range(swayFrequency.x, swayFrequency.y);
         transform.SetParent(hook, true);
-        transform.localPosition = localOffset;
+        PinMouth(_previousHookPosition);
     }
 
     public void Launch(Vector2 from, Vector2 velocity, float gravity)
@@ -130,9 +189,11 @@ public class Fish : MonoBehaviour
         CancelSwimming();
         State = FishState.Airborne;
         transform.SetParent(null, true);
+        _hook = null;
         transform.position = from;
         _velocity = velocity;
         _gravity = gravity;
+        _angularVelocity = Random.Range(tumbleSpeed.x, tumbleSpeed.y) * (Random.value < 0.5f ? -1f : 1f);
     }
 
     /// <summary>Called once by the controller after hook movement and before contact tests.</summary>
@@ -182,7 +243,43 @@ public class Fish : MonoBehaviour
         _damageFlash = 0f;
         transform.localScale = _baseScale;
         _renderer.color = _baseColor;
-        _renderer.flipX = _direction < 0f;
+    }
+
+    private void UpdateHookedPose(float seconds)
+    {
+        if (State != FishState.Hooked || _hook == null || seconds <= 0f)
+        {
+            return;
+        }
+
+        // Sample after controller movement, including motion of a rotated hook's local tip.
+        var anchor = _hook.TransformPoint(_hookOffset);
+        var velocityX = (anchor.x - _previousHookPosition.x) / seconds;
+        _previousHookPosition = anchor;
+        _swayPhase = Mathf.Repeat(_swayPhase + seconds * _swayFrequency * Mathf.PI * 2f, Mathf.PI * 2f);
+        var lean = Mathf.Clamp(-velocityX * dragLean, -maxDragLean, maxDragLean);
+        var target = _restingAngle + Mathf.Sin(_swayPhase) * swayAngle + lean;
+        _hookedAngle = Mathf.SmoothDampAngle(_hookedAngle, target, ref _hookedAngleVelocity,
+            Mathf.Max(0.01f, hookedSmoothTime), Mathf.Infinity, seconds);
+        transform.rotation = Quaternion.Euler(0f, 0f, _hookedAngle);
+        PinMouth(anchor);
+    }
+
+    private void PinMouth(Vector3 anchor)
+    {
+        var sprite = _renderer.sprite;
+        // A missing sprite uses a unit rectangle centered on the body pivot.
+        var mouth = sprite == null ? _mouthPosition - Vector2.one * 0.5f
+            : (Vector2.Scale(_mouthPosition, sprite.rect.size) - sprite.pivot) / sprite.pixelsPerUnit;
+        if (_renderer.flipX)
+        {
+            mouth.x = -mouth.x;
+        }
+        if (_renderer.flipY)
+        {
+            mouth.y = -mouth.y;
+        }
+        transform.position = anchor - transform.TransformVector(mouth);
     }
 
     private void ApplyDamageVisual()
@@ -194,9 +291,15 @@ public class Fish : MonoBehaviour
         transform.localScale = Vector3.Scale(_baseScale, new Vector3(1f + damage * 0.16f, 1f - damage * 0.18f, 1f));
     }
 
-    private void Fly()
+    private void Fly(float seconds)
     {
-        _velocity.y += _gravity * Time.deltaTime;
-        transform.position += (Vector3)(_velocity * Time.deltaTime);
+        if (State != FishState.Airborne || seconds <= 0f)
+        {
+            return;
+        }
+
+        _velocity.y += _gravity * seconds;
+        transform.position += (Vector3)(_velocity * seconds);
+        transform.Rotate(0f, 0f, _angularVelocity * seconds, Space.World);
     }
 }

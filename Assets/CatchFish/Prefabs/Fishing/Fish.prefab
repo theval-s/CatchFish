@@ -105,3 +105,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47263b6f9475948708c706957fafa51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Fish
+  hookedSmoothTime: 0.35
+  restingTilt: 10
+  swayAngle: 5
+  swayFrequency: {x: 0.4, y: 0.7}
+  dragLean: 4
+  maxDragLean: 23
+  tumbleSpeed: {x: 25, y: 55}

@@ -364,6 +364,207 @@ public class FishBehaviorTests
         }
     }
 
+    [TestCase(0.4f, false, false)]
+    [TestCase(2.3f, true, false)]
+    [TestCase(1.7f, false, true)]
+    [TestCase(0.7f, true, true)]
+    [Category("Unity")]
+    public void MouthRemainsOnMovingHookWithOffsetSpritePivotAndMirroring(float size, bool flipX, bool flipY)
+    {
+        var fishObject = new GameObject("Mouth anchor test", typeof(SpriteRenderer), typeof(Fish));
+        var hook = new GameObject("Moving mouth anchor");
+        var texture = new Texture2D(128, 64);
+        // An off-center pivot and a rect smaller than the texture expose bounds/texture-size mistakes.
+        var sprite = Sprite.Create(texture, new Rect(12f, 8f, 100f, 40f), new Vector2(0.23f, 0.72f), 40f);
+        var randomState = UnityEngine.Random.state;
+        try
+        {
+            var fish = fishObject.GetComponent<Fish>();
+            var renderer = fishObject.GetComponent<SpriteRenderer>();
+            var skin = new FishSkin { sprite = sprite };
+            fish.Init(new FishType { Size = size, MaxDepth = 100f }, skin, flipX ? -1f : 1f, 10f);
+            renderer.flipY = flipY;
+            fish.transform.rotation = Quaternion.Euler(0f, 0f, 31f);
+            hook.transform.SetPositionAndRotation(new Vector3(2f, -3f, 0f), Quaternion.Euler(0f, 0f, -17f));
+            var tip = new Vector3(0.17f, -0.39f, 0f);
+            fish.AttachToHook(hook.transform, tip);
+            AssertMouthAtAnchor(fish, renderer, skin.MouthPosition, hook.transform.TransformPoint(tip));
+            Assert.That(Mathf.DeltaAngle(31f, fish.transform.eulerAngles.z), Is.Zero.Within(0.001f));
+
+            for (var i = 0; i < 180; i++)
+            {
+                hook.transform.position += new Vector3(0.01f, 0.003f, 0f);
+                hook.transform.Rotate(0f, 0f, 0.3f);
+                Invoke(fish, "UpdateHookedPose", 1f / 60f);
+                AssertMouthAtAnchor(fish, renderer, skin.MouthPosition, hook.transform.TransformPoint(tip));
+            }
+
+            // With motion stopped, even mirrored art must settle near its authored head-up direction.
+            for (var i = 0; i < 240; i++)
+            {
+                Invoke(fish, "UpdateHookedPose", 1f / 60f);
+                AssertMouthAtAnchor(fish, renderer, skin.MouthPosition, hook.transform.TransformPoint(tip));
+            }
+            var headUp = flipX ? -skin.HeadUpAngle : skin.HeadUpAngle;
+            if (flipY)
+            {
+                headUp = 180f - headUp;
+            }
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(headUp, fish.transform.eulerAngles.z)), Is.LessThan(16f));
+        }
+        finally
+        {
+            UnityEngine.Random.state = randomState;
+            Object.DestroyImmediate(fishObject);
+            Object.DestroyImmediate(hook);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    [Category("Unity")]
+    public void LaunchPreservesLungeFacingAndWorldPose(bool attachFirst)
+    {
+        var fishObject = new GameObject("Lunge launch test", typeof(SpriteRenderer), typeof(Fish));
+        var hook = new GameObject("Lunge launch hook");
+        var randomState = UnityEngine.Random.state;
+        try
+        {
+            var fish = fishObject.GetComponent<Fish>();
+            var renderer = fishObject.GetComponent<SpriteRenderer>();
+            fish.Init(new FishType { Size = 1f, SwimSpeed = 1f, MaxDepth = 100f },
+                new FishSkin(), 1f, 10f, Cycle(FishSwimPattern.HookLunge));
+            fish.Swim(0.1f, fish.Position + Vector2.left, true);
+            Assert.That(renderer.flipX, Is.True, "The lunge must face opposite its spawn direction.");
+            fish.transform.rotation = Quaternion.Euler(0f, 0f, 37f);
+            if (attachFirst)
+            {
+                hook.transform.rotation = Quaternion.Euler(0f, 0f, -24f);
+                fish.AttachToHook(hook.transform, new Vector3(0.1f, -0.3f, 0f));
+                Assert.That(renderer.flipX, Is.True, "Attaching must preserve the lunge facing.");
+                Assert.That(Mathf.DeltaAngle(37f, fish.transform.eulerAngles.z), Is.Zero.Within(0.001f));
+                Invoke(fish, "UpdateHookedPose", 0.2f);
+            }
+
+            var rotation = fish.transform.rotation;
+            var from = (Vector2)fish.transform.position;
+            fish.Launch(from, new Vector2(2f, 3f), -5f);
+            Assert.That(fish.transform.parent, Is.Null);
+            Assert.That(Vector2.Distance(fish.Position, from), Is.LessThan(0.0001f));
+            Assert.That(Quaternion.Angle(rotation, fish.transform.rotation), Is.LessThan(0.001f));
+            Assert.That(renderer.flipX, Is.True, "Launching must preserve the lunge facing.");
+        }
+        finally
+        {
+            UnityEngine.Random.state = randomState;
+            Object.DestroyImmediate(fishObject);
+            Object.DestroyImmediate(hook);
+        }
+    }
+
+    [Test]
+    [Category("Unity")]
+    public void AirborneTumblingIsSlowContinuousAndDifferentAcrossFish()
+    {
+        var fishObjects = new GameObject[6];
+        var randomState = UnityEngine.Random.state;
+        try
+        {
+            UnityEngine.Random.InitState(7321);
+            var firstSpeed = 0f;
+            var differentiated = false;
+            for (var i = 0; i < fishObjects.Length; i++)
+            {
+                fishObjects[i] = new GameObject("Tumbling test fish", typeof(SpriteRenderer), typeof(Fish));
+                var fish = fishObjects[i].GetComponent<Fish>();
+                fish.Init(new FishType { Size = 1f, MaxDepth = 100f }, new FishSkin(), 1f, 10f);
+                fish.transform.rotation = Quaternion.Euler(0f, 0f, 358f);
+                fish.Launch(Vector2.zero, Vector2.up, -5f);
+                var previous = fish.transform.eulerAngles.z;
+                Invoke(fish, "Fly", 0.1f);
+                var step = Mathf.DeltaAngle(previous, fish.transform.eulerAngles.z);
+                Assert.That(Mathf.Abs(step), Is.InRange(2.499f, 5.501f));
+                if (i == 0)
+                {
+                    firstSpeed = step;
+                }
+                else
+                {
+                    differentiated |= Mathf.Abs(step - firstSpeed) > 0.01f;
+                }
+                for (var frame = 0; frame < 100; frame++)
+                {
+                    previous = fish.transform.eulerAngles.z;
+                    Invoke(fish, "Fly", 0.1f);
+                    Assert.That(Mathf.DeltaAngle(previous, fish.transform.eulerAngles.z), Is.EqualTo(step).Within(0.001f));
+                }
+            }
+            Assert.That(differentiated, Is.True, "A catch should not tumble in lockstep.");
+        }
+        finally
+        {
+            UnityEngine.Random.state = randomState;
+            foreach (var fishObject in fishObjects)
+            {
+                if (fishObject != null)
+                {
+                    Object.DestroyImmediate(fishObject);
+                }
+            }
+        }
+    }
+
+    [Test]
+    [Category("Unity")]
+    public void ReinitClearsHookAndFlightMotionBeforeReuse()
+    {
+        var fishObject = new GameObject("Pose reuse test", typeof(SpriteRenderer), typeof(Fish));
+        var hook = new GameObject("Old hook");
+        var randomState = UnityEngine.Random.state;
+        try
+        {
+            var fish = fishObject.GetComponent<Fish>();
+            var type = new FishType { Size = 1f, MaxDepth = 100f };
+            var skin = new FishSkin();
+            fish.Init(type, skin, -1f, 10f);
+            fish.AttachToHook(hook.transform, Vector3.zero);
+            Invoke(fish, "UpdateHookedPose", 0.4f);
+            fish.Init(type, skin, 1f, 10f);
+            var position = fish.transform.position;
+            hook.transform.position = new Vector3(20f, 30f, 0f);
+            Invoke(fish, "UpdateHookedPose", 1f);
+            Assert.That(fish.transform.parent, Is.Null);
+            Assert.That(fish.transform.position, Is.EqualTo(position));
+            fish.Launch(Vector2.zero, new Vector2(3f, 10f), -5f);
+            Invoke(fish, "Fly", 0.5f);
+            fish.Init(type, skin, 1f, 10f);
+            position = fish.transform.position;
+            Invoke(fish, "Fly", 1f);
+            Invoke(fish, "UpdateHookedPose", 1f);
+            Assert.That(fish.State, Is.EqualTo(FishState.Swimming));
+            Assert.That(fish.transform.position, Is.EqualTo(position));
+            Assert.That(Quaternion.Angle(fish.transform.rotation, Quaternion.identity), Is.LessThan(0.001f));
+            Assert.That(fishObject.GetComponent<SpriteRenderer>().flipX, Is.False);
+        }
+        finally
+        {
+            UnityEngine.Random.state = randomState;
+            Object.DestroyImmediate(fishObject);
+            Object.DestroyImmediate(hook);
+        }
+    }
+
+    private static void AssertMouthAtAnchor(Fish fish, SpriteRenderer renderer, Vector2 normalizedMouth, Vector3 anchor)
+    {
+        var sprite = renderer.sprite;
+        var pixel = Vector2.Scale(normalizedMouth, sprite.rect.size);
+        var local = (pixel - sprite.pivot) / sprite.pixelsPerUnit;
+        local = Vector2.Scale(local, new Vector2(renderer.flipX ? -1f : 1f, renderer.flipY ? -1f : 1f));
+        Assert.That(Vector3.Distance(fish.transform.TransformPoint(local), anchor), Is.LessThan(0.0001f));
+    }
+
     private static FishBehaviorSettings Cycle(FishSwimPattern pattern)
     {
         var settings = new FishBehaviorSettings();
@@ -393,9 +594,9 @@ public class FishBehaviorTests
         target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance).SetValue(target, value);
     }
 
-    private static void Invoke(object target, string name)
+    private static void Invoke(object target, string name, params object[] arguments)
     {
-        target.GetType().GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(target, null);
+        target.GetType().GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(target, arguments);
     }
 }
 #endif
