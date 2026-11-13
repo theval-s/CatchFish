@@ -171,7 +171,6 @@ public class FishSpawner : MonoBehaviour
         var fish = Instantiate(fishPrefab, position, Quaternion.identity, transform);
         fish.name = data.Name;
         fish.Init(data, skins.Get(data.Id), direction, halfWidth, behaviors == null ? null : behaviors.Get(data.Id));
-        fish.transform.SetParent(transform, true);
         _fish.Add(fish);
         return fish;
     }

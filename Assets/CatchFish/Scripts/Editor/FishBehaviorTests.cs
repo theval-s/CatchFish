@@ -236,46 +236,79 @@ public class FishBehaviorTests
 
     [Test]
     [Category("Unity")]
-    public void HookAndDirectLaunchRestoreRadiusTintAndScaleAndReinitIsSafe()
+    public void HookAndDirectLaunchRestoreRadiusTintAndScale()
     {
-        var fishObject = new GameObject("Behavior test fish", typeof(SpriteRenderer), typeof(Fish));
+        // Fish aren't pooled, so each scenario gets a fresh fish.
+        var type = new FishType { Size = 1f, SwimSpeed = 1f, MinDepth = 0f, MaxDepth = 100f };
+        var skin = new FishSkin { color = Color.cyan };
+        var hooked = NewFish(type, skin, 1f, Cycle(FishSwimPattern.Inflation));
+        var warnedThenLaunched = NewFish(type, skin, -1f, Cycle(FishSwimPattern.TimedBurst));
+        var inflatedThenLaunched = NewFish(type, skin, 1f, Cycle(FishSwimPattern.Inflation));
         var hook = new GameObject("Behavior test hook");
         try
         {
-            var fish = fishObject.GetComponent<Fish>();
-            var type = new FishType { Size = 1f, SwimSpeed = 1f, MinDepth = 0f, MaxDepth = 100f };
-            var skin = new FishSkin { color = Color.cyan };
-            fish.transform.position = new Vector3(0f, -10f);
-            fish.Init(type, skin, 1f, 3f, Cycle(FishSwimPattern.Inflation));
-            var scale = fish.transform.localScale;
-            fish.Swim(1.3f, Vector2.zero, false);
-            Assert.That(fish.Radius, Is.EqualTo(0.825f).Within(0.0001f));
-            fish.HasHitHook = true;
-            fish.AttachToHook(hook.transform, Vector3.zero);
-            Assert.That(fish.Radius, Is.EqualTo(0.5f));
-            Assert.That(fish.transform.localScale, Is.EqualTo(scale));
-            Assert.That(fishObject.GetComponent<SpriteRenderer>().color, Is.EqualTo(skin.color));
-            fish.Swim(100f, Vector2.zero, true);
-            Assert.That(fish.Radius, Is.EqualTo(0.5f));
-            fish.Init(type, skin, -1f, 3f, Cycle(FishSwimPattern.TimedBurst));
-            Assert.That(fish.HasHitHook, Is.False);
-            fish.Swim(1.125f, Vector2.zero, false);
-            Assert.That(fishObject.GetComponent<SpriteRenderer>().color, Is.Not.EqualTo(skin.color));
-            fish.Launch(Vector2.zero, Vector2.up, -5f);
-            Assert.That(fish.transform.localScale, Is.EqualTo(scale));
-            Assert.That(fishObject.GetComponent<SpriteRenderer>().color, Is.EqualTo(skin.color));
-            Assert.That(fish.Radius, Is.EqualTo(0.5f));
-            fish.transform.position = new Vector3(0f, -10f);
-            fish.Init(type, skin, 1f, 3f, Cycle(FishSwimPattern.Inflation));
-            fish.Swim(1.3f, Vector2.zero, false);
-            fish.Launch(Vector2.zero, Vector2.up, -5f);
-            Assert.That(fish.Radius, Is.EqualTo(0.5f));
-            Assert.That(fish.transform.localScale, Is.EqualTo(scale));
+            var scale = hooked.transform.localScale;
+            hooked.Swim(1.3f, Vector2.zero, false);
+            Assert.That(hooked.Radius, Is.EqualTo(0.825f).Within(0.0001f));
+            hooked.AttachToHook(hook.transform, Vector3.zero);
+            Assert.That(hooked.Radius, Is.EqualTo(0.5f));
+            Assert.That(hooked.transform.localScale, Is.EqualTo(scale));
+            Assert.That(hooked.GetComponent<SpriteRenderer>().color, Is.EqualTo(skin.color));
+            hooked.Swim(100f, Vector2.zero, true);
+            Assert.That(hooked.Radius, Is.EqualTo(0.5f));
+
+            warnedThenLaunched.Swim(1.125f, Vector2.zero, false);
+            Assert.That(warnedThenLaunched.GetComponent<SpriteRenderer>().color, Is.Not.EqualTo(skin.color));
+            warnedThenLaunched.Launch(Vector2.zero, Vector2.up, -5f);
+            Assert.That(warnedThenLaunched.transform.localScale, Is.EqualTo(scale));
+            Assert.That(warnedThenLaunched.GetComponent<SpriteRenderer>().color, Is.EqualTo(skin.color));
+            Assert.That(warnedThenLaunched.GetComponent<SpriteRenderer>().flipX, Is.True);
+            Assert.That(warnedThenLaunched.Radius, Is.EqualTo(0.5f));
+
+            inflatedThenLaunched.Swim(1.3f, Vector2.zero, false);
+            inflatedThenLaunched.Launch(Vector2.zero, Vector2.up, -5f);
+            Assert.That(inflatedThenLaunched.Radius, Is.EqualTo(0.5f));
+            Assert.That(inflatedThenLaunched.transform.localScale, Is.EqualTo(scale));
         }
         finally
         {
-            Object.DestroyImmediate(fishObject);
+            Object.DestroyImmediate(hooked.gameObject);
+            Object.DestroyImmediate(warnedThenLaunched.gameObject);
+            Object.DestroyImmediate(inflatedThenLaunched.gameObject);
             Object.DestroyImmediate(hook);
+        }
+    }
+
+    [Test]
+    [Category("Unity")]
+    public void SwimPoseFollowsPhaseChangesAndReturnsToBase()
+    {
+        var skin = new FishSkin { color = Color.cyan };
+        var fish = NewFish(new FishType { Size = 1f, SwimSpeed = 1f, MaxDepth = 100f }, skin, 1f,
+            Cycle(FishSwimPattern.Inflation));
+        try
+        {
+            var renderer = fish.GetComponent<SpriteRenderer>();
+            var scale = fish.transform.localScale;
+            // Cycle: cruise until 1, warning until 1.25, inflated until 1.75, then recovery.
+            fish.Swim(1.125f, Vector2.zero, false);
+            Assert.That(renderer.color, Is.Not.EqualTo(skin.color));
+            var squash = fish.transform.localScale;
+            Assert.That(squash, Is.Not.EqualTo(scale));
+            fish.Swim(0.05f, Vector2.zero, false);
+            Assert.That(fish.transform.localScale, Is.Not.EqualTo(squash), "The warning squash animates");
+            fish.Swim(0.2f, Vector2.zero, false);
+            Assert.That(renderer.color, Is.EqualTo(skin.color));
+            Assert.That(fish.transform.localScale, Is.EqualTo(scale * 1.65f));
+            Assert.That(fish.Radius, Is.EqualTo(0.825f).Within(0.0001f));
+            fish.Swim(0.5f, Vector2.zero, false);
+            Assert.That(fish.transform.localScale, Is.EqualTo(scale));
+            Assert.That(fish.Radius, Is.EqualTo(0.5f));
+            Assert.That(renderer.flipX, Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(fish.gameObject);
         }
     }
 
@@ -353,10 +386,6 @@ public class FishBehaviorTests
             Assert.That(fish.Radius, Is.EqualTo(0.5f));
             Assert.That(fish.TryShoot(), Is.True);
             Assert.That(fish.TryShoot(), Is.False);
-            fish.Init(new FishType { Size = 1f, MaxDepth = 100f }, new FishSkin(), -1f, 3f, settings);
-            Assert.That(fish.State, Is.EqualTo(FishState.Swimming));
-            Assert.That(fish.HitsLeft, Is.EqualTo(3));
-            Assert.That(fish.TryShoot(), Is.False);
         }
         finally
         {
@@ -374,6 +403,14 @@ public class FishBehaviorTests
         Set(settings, "activeSeconds", 0.5f);
         Set(settings, "recoverySeconds", 0.75f);
         return settings;
+    }
+
+    private static Fish NewFish(FishType type, FishSkin skin, float direction, FishBehaviorSettings settings)
+    {
+        var fish = new GameObject("Behavior test fish", typeof(SpriteRenderer), typeof(Fish)).GetComponent<Fish>();
+        fish.transform.position = new Vector3(0f, -10f);
+        fish.Init(type, skin, direction, 3f, settings);
+        return fish;
     }
 
     private static FishSwimmingBehavior NewBehavior(FishBehaviorSettings settings)

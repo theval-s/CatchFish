@@ -21,8 +21,6 @@ public class Fish : MonoBehaviour
     private readonly FishSwimmingBehavior _swimming = new FishSwimmingBehavior();
     private readonly FishArmor _armor = new FishArmor();
     private SpriteRenderer _renderer;
-    private Sprite _placeholderSprite;
-    private bool _initialized;
     private Vector3 _baseScale;
     private Color _baseColor;
     private float _originY;
@@ -31,6 +29,9 @@ public class Fish : MonoBehaviour
     private float _wrapSpan;
     private float _radiusScale = 1f;
     private float _damageFlash;
+    // What the renderer and scale currently show, so Swim only writes them when the pose changes.
+    private FishSwimPhase _shownPhase;
+    private bool _flipped;
 
     public FishType Type { get; private set; }
     public FishState State { get; private set; }
@@ -49,25 +50,27 @@ public class Fish : MonoBehaviour
         if (State == FishState.Airborne)
         {
             Fly();
-            _damageFlash = Mathf.Max(0f, _damageFlash - Time.deltaTime);
-            ApplyDamageVisual();
+            if (_damageFlash > 0f)
+            {
+                _damageFlash -= Time.deltaTime;
+                if (_damageFlash <= 0f)
+                {
+                    // The impact flash is over: back to the lasting damage look.
+                    _damageFlash = 0f;
+                    ApplyDamageVisual();
+                }
+            }
         }
     }
 
+    /// <summary>Called once, right after the spawner instantiates the fish. Fish aren't pooled.</summary>
     public void Init(FishType type, FishSkin skin, float direction, float halfWidth,
         FishBehaviorSettings behavior = null)
     {
-        transform.SetParent(null, true);
-        transform.rotation = Quaternion.identity;
         Type = type;
         _direction = direction < 0f ? -1f : 1f;
         _halfWidth = halfWidth;
         State = FishState.Swimming;
-        HasHitHook = false;
-        _velocity = Vector2.zero;
-        _gravity = 0f;
-        _damageFlash = 0f;
-        _radiusScale = 1f;
         behavior = behavior ?? new FishBehaviorSettings();
         _armor.Reset(behavior.AirborneHits);
         _swimming.Reset(behavior, _direction, () => Random.value);
@@ -86,30 +89,20 @@ public class Fish : MonoBehaviour
         transform.position = position;
 
         _renderer = GetComponent<SpriteRenderer>();
-        if (!_initialized)
-        {
-            _placeholderSprite = _renderer.sprite;
-            _initialized = true;
-        }
-
         if (skin.sprite != null)
         {
             // Real art keeps its own proportions (see FishSkin.sprite).
             _renderer.sprite = skin.sprite;
-            transform.localScale = Vector3.one * type.Size;
+            _baseScale = Vector3.one * type.Size;
         }
         else
         {
-            // The placeholder square, stretched into a fish shape.
-            _renderer.sprite = _placeholderSprite;
-            transform.localScale = new Vector3(type.Size * 1.5f, type.Size, 1f);
+            // The prefab's placeholder square, stretched into a fish shape.
+            _baseScale = new Vector3(type.Size * 1.5f, type.Size, 1f);
         }
 
-        // Art faces right; fish swimming left are mirrored.
-        _renderer.flipX = _direction < 0f;
-        _baseScale = transform.localScale;
         _baseColor = skin.color;
-        _renderer.color = _baseColor;
+        ShowBasePose();
         var spriteHalfWidth = _renderer.sprite == null ? type.Size * 0.75f
             : _renderer.sprite.bounds.extents.x * _baseScale.x;
         // Keep wide canvases fully offscreen before wrapping, including the largest cue pose.
@@ -151,14 +144,7 @@ public class Fish : MonoBehaviour
         _originY = Mathf.Clamp(_originY + moveY, _minY, _maxY);
         position.y = Mathf.Clamp(_originY + _swimming.WaveOffset, _minY, _maxY);
         transform.position = position;
-        _radiusScale = _swimming.Scale;
-        _renderer.flipX = _swimming.FacingDirection < 0f;
-        var warning = _swimming.Phase == FishSwimPhase.Warning;
-        var pulse = warning ? Mathf.Sin(_swimming.WarningProgress * Mathf.PI * 3f) : 0f;
-        transform.localScale = warning
-            ? Vector3.Scale(_baseScale, new Vector3(0.82f - pulse * 0.04f, 1.06f + pulse * 0.02f, 1f))
-            : _baseScale * _radiusScale;
-        _renderer.color = warning ? Color.Lerp(_baseColor, new Color(1f, 0.45f, 0.2f), 0.65f) : _baseColor;
+        ShowSwimPose();
     }
 
     /// <summary>Returns true only on the lethal airborne hit; callers award the fish once.</summary>
@@ -179,10 +165,55 @@ public class Fish : MonoBehaviour
     {
         _swimming.Cancel();
         _radiusScale = 1f;
-        _damageFlash = 0f;
-        transform.localScale = _baseScale;
+        ShowBasePose();
+    }
+
+    /// <summary>The plain swimming look: own scale and color, facing the way the fish swims.</summary>
+    private void ShowBasePose()
+    {
+        _shownPhase = FishSwimPhase.Cruise;
+        // Art faces right; fish swimming left are mirrored.
+        _flipped = _direction < 0f;
+        _renderer.flipX = _flipped;
         _renderer.color = _baseColor;
-        _renderer.flipX = _direction < 0f;
+        transform.localScale = _baseScale;
+    }
+
+    /// <summary>
+    /// Updates facing, tint and scale for the current swim phase. Most fish cruise for the whole run,
+    /// so this writes to the renderer only when something changed; the warning squash is the one
+    /// pose that animates every frame.
+    /// </summary>
+    private void ShowSwimPose()
+    {
+        var flipped = _swimming.FacingDirection < 0f;
+        if (flipped != _flipped)
+        {
+            _flipped = flipped;
+            _renderer.flipX = flipped;
+        }
+
+        var phase = _swimming.Phase;
+        var warning = phase == FishSwimPhase.Warning;
+        if (warning)
+        {
+            var pulse = Mathf.Sin(_swimming.WarningProgress * Mathf.PI * 3f);
+            transform.localScale = Vector3.Scale(_baseScale, new Vector3(0.82f - pulse * 0.04f, 1.06f + pulse * 0.02f, 1f));
+        }
+
+        if (phase == _shownPhase)
+        {
+            return;
+        }
+
+        // Inflation is the only scale change, and it starts and ends with a phase.
+        _shownPhase = phase;
+        _radiusScale = _swimming.Scale;
+        _renderer.color = warning ? Color.Lerp(_baseColor, new Color(1f, 0.45f, 0.2f), 0.65f) : _baseColor;
+        if (!warning)
+        {
+            transform.localScale = _baseScale * _radiusScale;
+        }
     }
 
     private void ApplyDamageVisual()
