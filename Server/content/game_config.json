@@ -1,25 +1,30 @@
 {
   "fish": [
-    { "id": "f1", "name": "Roach",           "value": 2,   "minDepth": 0,   "maxDepth": 80,  "swimSpeed": 1.2, "size": 0.6, "spawnWeight": 10,  "isCollectible": false },
-    { "id": "f2", "name": "Crucian carp",    "value": 6,   "minDepth": 15,  "maxDepth": 150, "swimSpeed": 1.8, "size": 0.7, "spawnWeight": 7,   "isCollectible": false },
-    { "id": "f3", "name": "Gudgeon",         "value": 15,  "minDepth": 50,  "maxDepth": 250, "swimSpeed": 2.4, "size": 0.9, "spawnWeight": 5,   "isCollectible": false },
-    { "id": "f4", "name": "Pike",            "value": 40,  "minDepth": 110, "maxDepth": 400, "swimSpeed": 1.0, "size": 0.9, "spawnWeight": 3,   "isCollectible": false },
-    { "id": "f5", "name": "Golden sturgeon", "value": 120, "minDepth": 30,  "maxDepth": 400, "swimSpeed": 3.2, "size": 0.6, "spawnWeight": 1.5, "isCollectible": true },
-    { "id": "f6", "name": "Jellyfish",       "value": -10, "minDepth": 25,  "maxDepth": 400, "swimSpeed": 0.4, "size": 0.8, "spawnWeight": 4,   "isCollectible": false },
-    { "id": "f7", "name": "Glow catfish",    "value": 60,  "minDepth": 150, "maxDepth": 400, "swimSpeed": 2.0, "size": 0.8, "spawnWeight": 0.8, "isCollectible": true }
+    { "id": "f1",  "name": "Tin Minnow",       "value": 2,   "minDepth": 0,   "maxDepth": 80,  "swimSpeed": 1.2,  "size": 0.6,  "spawnWeight": 10,  "isCollectible": false },
+    { "id": "f2",  "name": "Brick Bream",      "value": 6,   "minDepth": 15,  "maxDepth": 160, "swimSpeed": 0.65, "size": 0.9,  "spawnWeight": 6,   "isCollectible": false },
+    { "id": "f3",  "name": "Stripe Sprat",     "value": 4,   "minDepth": 0,   "maxDepth": 160, "swimSpeed": 1.4,  "size": 0.55, "spawnWeight": 7,   "isCollectible": false },
+    { "id": "f4",  "name": "Needlefish",       "value": 22,  "minDepth": 65,  "maxDepth": 300, "swimSpeed": 1.1,  "size": 0.5,  "spawnWeight": 3.5, "isCollectible": false },
+    { "id": "f5",  "name": "Mirror Carp",      "value": 120, "minDepth": 30,  "maxDepth": 400, "swimSpeed": 1.6,  "size": 0.85, "spawnWeight": 1.2, "isCollectible": true },
+    { "id": "f6",  "name": "Lantern Jelly",    "value": -10, "minDepth": 25,  "maxDepth": 400, "swimSpeed": 0.25, "size": 0.85, "spawnWeight": 3,   "isCollectible": false },
+    { "id": "f7",  "name": "Crownfin",         "value": 60,  "minDepth": 150, "maxDepth": 400, "swimSpeed": 1.2,  "size": 0.9,  "spawnWeight": 0.8, "isCollectible": true },
+    { "id": "f8",  "name": "Ribbon Eel",       "value": 30,  "minDepth": 90,  "maxDepth": 400, "swimSpeed": 0.8,  "size": 0.55, "spawnWeight": 2.5, "isCollectible": false },
+    { "id": "f9",  "name": "Puffer",           "value": 18,  "minDepth": 50,  "maxDepth": 280, "swimSpeed": 0.55, "size": 0.7,  "spawnWeight": 3,   "isCollectible": false },
+    { "id": "f10", "name": "Snapper",          "value": 35,  "minDepth": 100, "maxDepth": 400, "swimSpeed": 0.9,  "size": 0.8,  "spawnWeight": 2.5, "isCollectible": false },
+    { "id": "f11", "name": "Armored Grouper",  "value": 85,  "minDepth": 180, "maxDepth": 400, "swimSpeed": 0.45, "size": 1.1,  "spawnWeight": 1.6, "isCollectible": false },
+    { "id": "f12", "name": "Angler",           "value": 55,  "minDepth": 200, "maxDepth": 400, "swimSpeed": 0.55, "size": 0.95, "spawnWeight": 1.5, "isCollectible": false }
   ],
   "quests": [
     {
       "id": 1,
       "title": "Proof of quality",
-      "description": "The buyer on Fishy Road wants proof you can get the rare stuff. Bring one golden sturgeon.",
+      "description": "The buyer on Fishy Road wants proof you can get the rare stuff. Bring one Mirror Carp.",
       "requirements": { "f5": 1 },
       "unlocksId": [ 2 ]
     },
     {
       "id": 2,
       "title": "Chef's special",
-      "description": "A restaurant pays well for a glowing catfish. And two more sturgeons for the chef.",
+      "description": "A restaurant pays well for a Crownfin. And two more Mirror Carp for the chef.",
       "requirements": { "f5": 2, "f7": 1 },
       "unlocksId": [ 3 ]
     },

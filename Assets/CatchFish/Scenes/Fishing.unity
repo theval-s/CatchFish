@@ -1703,6 +1703,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FishSpawner
   fishPrefab: {fileID: 4572809433154452688, guid: 11190880569b64d909e4511ab873ee3e, type: 3}
   skins: {fileID: 11400000, guid: a372c01a2a32e4ccd94f7ae81079002f, type: 2}
+  behaviors: {fileID: 11400000, guid: 6877d1cfe23140c9b07d36c9255f18dd, type: 2}
   halfWidth: 3
   firstSpawnDepth: 6
   bandHeight: 4
@@ -3579,7 +3580,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Collected: Golden sturgeon x1'
+  m_text: 'Collected: Mirror Carp x1'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

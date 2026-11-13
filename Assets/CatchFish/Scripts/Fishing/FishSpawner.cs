@@ -10,6 +10,7 @@ public class FishSpawner : MonoBehaviour
 {
     [SerializeField] private Fish fishPrefab;
     [SerializeField] private FishSkinCatalog skins;
+    [SerializeField] private FishBehaviorCatalog behaviors;
     [SerializeField] private float halfWidth = 3f;
 
     [Header("Density")]
@@ -65,6 +66,14 @@ public class FishSpawner : MonoBehaviour
         Destroy(fish.gameObject);
     }
 
+    public void Swim(float seconds, Vector2 hookPosition, bool hookActive)
+    {
+        foreach (var fish in _fish)
+        {
+            fish.Swim(seconds, hookPosition, hookActive);
+        }
+    }
+
     public void Clear()
     {
         foreach (var fish in _fish)
@@ -80,7 +89,12 @@ public class FishSpawner : MonoBehaviour
 
     private void SpawnGroup(FishType data, float depth)
     {
-        if (depth < patternStartDepth || Random.value > patternChance)
+        var behavior = behaviors == null ? null : behaviors.Get(data.Id);
+        if (behavior != null && behavior.School)
+        {
+            SpawnSchool(data, depth, behavior);
+        }
+        else if (depth < patternStartDepth || Random.value > patternChance)
         {
             SpawnSingle(data, depth);
         }
@@ -91,6 +105,24 @@ public class FishSpawner : MonoBehaviour
         else
         {
             SpawnColumn(data, depth);
+        }
+    }
+
+    private void SpawnSchool(FishType data, float depth, FishBehaviorSettings behavior)
+    {
+        var skin = skins.Get(data.Id);
+        var width = skin.sprite == null ? data.Size * 1.5f : skin.sprite.bounds.size.x * data.Size;
+        var span = halfWidth + Mathf.Max(data.Size * 0.5f, width * 0.5f) * 1.08f;
+        var spacing = width + behavior.SchoolSpacing;
+        var count = FishSchoolLayout.FitCount(Random.Range(behavior.SchoolMin, behavior.SchoolMax + 1),
+            span, spacing, behavior.SchoolGap);
+        var start = Random.Range(-span, span);
+        var direction = RandomDirection();
+        for (var i = 0; i < count; i++)
+        {
+            var x = FishSchoolLayout.Wrap(start + i * spacing, span);
+            var offset = i % 2 == 0 ? 0f : behavior.SchoolVerticalOffset;
+            CreateFish(data, new Vector2(x, -depth + offset), direction);
         }
     }
 
@@ -138,7 +170,8 @@ public class FishSpawner : MonoBehaviour
     {
         var fish = Instantiate(fishPrefab, position, Quaternion.identity, transform);
         fish.name = data.Name;
-        fish.Init(data, skins.Get(data.Id), direction, halfWidth);
+        fish.Init(data, skins.Get(data.Id), direction, halfWidth, behaviors == null ? null : behaviors.Get(data.Id));
+        fish.transform.SetParent(transform, true);
         _fish.Add(fish);
         return fish;
     }

@@ -14,6 +14,17 @@ public class RootScope : LifetimeScope
     [Tooltip("The hosted server: https://fish.thevals.ru:1337. A server on this machine: http://localhost:8080 (editor only).")]
     [SerializeField] private string serverUrl = "https://fish.thevals.ru:1337";
 
+    [Header("Performance")]
+    [Tooltip("Frames per second to aim for. Android caps the game at 30 unless this is set; a value above the " +
+             "screen's refresh rate runs at the refresh rate (60 on a 60 Hz phone, 120 on a 120 Hz one).")]
+    [SerializeField] private int targetFrameRate = 120;
+
+    protected override void Awake()
+    {
+        Application.targetFrameRate = targetFrameRate;
+        base.Awake();
+    }
+
     protected override void Configure(IContainerBuilder builder)
     {
         // Infrastructure
