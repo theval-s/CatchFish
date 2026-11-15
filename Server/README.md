@@ -22,6 +22,7 @@ so all you need is CMake, a C++ compiler and OpenSSL (for the HTTPS calls to Goo
 | `src/Storage.cpp` | SQLite tables and their migrations |
 | `src/Model.h` | C++ copies of the client's `GameConfig`, `GameState` and `RunResult` |
 | `content/game_config.json` | The config a new database starts with |
+| `site/` | The public home page and privacy policy, served by Caddy (Google requires them for sign-in) |
 | `CatchFish.postman_collection.json` | Every request, ready for Postman |
 
 ## Build and run
@@ -164,17 +165,36 @@ in the service file and change the Caddyfile to match.
 sudo apt install caddy
 ```
 
-Replace everything in `/etc/caddy/Caddyfile` with the block below. The default file serves a welcome page on
+Copy the public pages where Caddy can read them (it runs as its own user and can't see your home folder):
+
+```bash
+sudo mkdir -p /var/www/catchfish
+sudo cp ~/CatchFish/Server/site/* /var/www/catchfish/
+```
+
+Replace everything in `/etc/caddy/Caddyfile` with the blocks below. The default file serves a welcome page on
 port 80, which would become public once that port is forwarded.
 
 ```
+# The game API, on its own port.
 fish.thevals.ru:1337 {
 	reverse_proxy 127.0.0.1:8080
 }
+
+# The public pages, on the standard HTTPS port: the home page and the privacy policy Google sign-in links to.
+fish.thevals.ru {
+	root * /var/www/catchfish
+	try_files {path}.html {path}
+	file_server
+}
 ```
 
+The pages need port 443 forwarded to the laptop as well (next to 1337 and 80, see step 1). On the Google Cloud
+console's Branding page, the home page is `https://fish.thevals.ru` and the privacy policy is
+`https://fish.thevals.ru/privacy`. After editing a page in `site/`, copy it to `/var/www/catchfish` again.
+
 Then `sudo systemctl reload caddy` and watch `journalctl -u caddy -f` for "certificate obtained successfully".
-If a firewall (ufw) is on, allow ports 80 and 1337.
+If a firewall (ufw) is on, allow ports 80, 443 and 1337.
 
 **5. Check from outside** (a phone on mobile data): `https://fish.thevals.ru:1337/time`.
 
