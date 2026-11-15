@@ -11,6 +11,7 @@ public class HubScope : LifetimeScope
     [SerializeField] private QuestsView quests;
     [SerializeField] private DailyRewardView dailyReward;
     [SerializeField] private EnergyView energy;
+    [SerializeField] private DialogView introDialog;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -20,6 +21,7 @@ public class HubScope : LifetimeScope
         builder.RegisterComponent(quests);
         builder.RegisterComponent(dailyReward);
         builder.RegisterComponent(energy);
+        builder.RegisterComponent(introDialog);
 
         builder.RegisterEntryPoint<CurrencyBarPresenter>();
         builder.RegisterEntryPoint<HubMenuPresenter>();
@@ -27,5 +29,6 @@ public class HubScope : LifetimeScope
         builder.RegisterEntryPoint<QuestsPresenter>();
         builder.RegisterEntryPoint<DailyRewardPresenter>();
         builder.RegisterEntryPoint<EnergyPresenter>();
+        builder.RegisterEntryPoint<IntroDialogPresenter>();
     }
 }

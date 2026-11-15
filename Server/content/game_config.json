@@ -58,5 +58,11 @@
       { "dr": 400, "gems": 10 }
     ]
   },
-  "energy": { "max": 5, "regenMinutes": 20, "runCost": 1, "refillGems": 10 }
+  "energy": { "max": 5, "regenMinutes": 20, "runCost": 1, "refillGems": 10 },
+  "introDialog": [
+    { "speaker": "", "text": "Petrovich has a boat, a rod and a family to feed. Fishing licenses are for other people." },
+    { "speaker": "Petrovich", "text": "The fish inspectors call it poaching. I call it a family business." },
+    { "speaker": "Petrovich", "text": "Rare fish fetch the best price on Fishy Road. Let's catch some before anyone notices." },
+    { "speaker": "Petrovich", "text": "Dodge the fish on the way down, hook them on the way up, then shoot them out of the air!" }
+  ]
 }

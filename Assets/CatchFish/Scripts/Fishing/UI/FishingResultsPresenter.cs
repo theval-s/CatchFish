@@ -1,15 +1,20 @@
 using System;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using VContainer.Unity;
 
 /// <summary>Shows the run summary once the backend has the results and takes the player back to the hub.</summary>
 public class FishingResultsPresenter : IStartable, IDisposable
 {
+    // After the first run the player goes back to the hub by themselves: there's nothing else to do yet.
+    private const int FirstRunReturnMs = 3000;
+
     private readonly FishingResultsView _view;
     private readonly FishingService _fishing;
     private readonly ConfigService _config;
     private readonly SceneLoader _scenes;
+    private bool _leaving;
 
     public FishingResultsPresenter(FishingResultsView view, FishingService fishing, ConfigService config,
         SceneLoader scenes)
@@ -56,11 +61,32 @@ public class FishingResultsPresenter : IStartable, IDisposable
             notes.AppendLine($"Shocked by an eel: {shocked} fish at half price");
         }
         notes.Append(DescribeCollected(session));
+        if (session.IsFirstRun)
+        {
+            notes.Append("\nHeading back to the hub...");
+            _ = ReturnToHubAsync();
+        }
 
         _view.Show(session.DepthReached, session.Caught, session.Shot, session.Lost, session.Earnings, notes.ToString().TrimEnd());
     }
 
-    private void OnBackToHub() => _ = _scenes.LoadAsync(SceneNames.Hub);
+    private void OnBackToHub()
+    {
+        // The button and the first-run timer can both fire.
+        if (_leaving)
+        {
+            return;
+        }
+
+        _leaving = true;
+        _ = _scenes.LoadAsync(SceneNames.Hub);
+    }
+
+    private async Task ReturnToHubAsync()
+    {
+        await Task.Delay(FirstRunReturnMs);
+        OnBackToHub();
+    }
 
     private string DescribeCollected(FishingSessionState session)
     {

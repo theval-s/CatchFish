@@ -16,6 +16,16 @@ public class GameConfig
     public List<GearUpgradeData> Gear { get; set; } = new List<GearUpgradeData>();
     public DailyRewardTrack DailyRewards { get; set; } = new DailyRewardTrack();
     public EnergyConfig Energy { get; set; } = new EnergyConfig();
+
+    /// <summary>Shown in the hub before the first run.</summary>
+    public List<DialogLine> IntroDialog { get; set; } = new List<DialogLine>();
+}
+
+/// <summary>One line of a story dialog; an empty speaker is the narrator.</summary>
+public class DialogLine
+{
+    public string Speaker { get; set; } = "";
+    public string Text { get; set; } = "";
 }
 
 /// <summary>One kind of fish.</summary>
