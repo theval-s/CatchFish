@@ -32,6 +32,7 @@ public class RootScope : LifetimeScope
         builder.Register<ConfigService>(Lifetime.Singleton);
         builder.Register<ServerTimeService>(Lifetime.Singleton);
         builder.Register<ProfileSyncService>(Lifetime.Singleton);
+        builder.Register<BrowserService>(Lifetime.Singleton);
         builder.RegisterComponent(loadingScreen);
         builder.Register<SceneLoader>(Lifetime.Singleton);
 
@@ -44,5 +45,6 @@ public class RootScope : LifetimeScope
         builder.Register<DailyRewardService>(Lifetime.Singleton);
         builder.Register<SchoolService>(Lifetime.Singleton);
         builder.Register<HomeService>(Lifetime.Singleton);
+        builder.Register<AccountService>(Lifetime.Singleton);
     }
 }

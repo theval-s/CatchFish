@@ -13,7 +13,11 @@ public class ApiException : Exception
         : base($"{code}: {message}")
     {
         Code = code;
+        Detail = message;
     }
 
     public string Code { get; }
+
+    /// <summary>The server's message without the code.</summary>
+    public string Detail { get; }
 }

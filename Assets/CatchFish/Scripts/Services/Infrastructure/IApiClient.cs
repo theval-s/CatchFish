@@ -17,6 +17,21 @@ public interface IApiClient
     /// <summary>Forgets this device's guest and signs in as a new player.</summary>
     Task StartNewPlayerAsync();
 
+    /// <summary>
+    /// Starts linking a Google account to this player: open the returned url in a browser, then poll
+    /// <see cref="FinishGoogleSignInAsync"/> with the same secret.
+    /// </summary>
+    Task<GoogleSignInStart> BeginGoogleSignInAsync(string loginSecret);
+
+    /// <summary>
+    /// Null while the player hasn't finished in the browser. Throws <see cref="ApiException"/> identity_taken
+    /// if the Google account has another player, unless <paramref name="switchPlayer"/>: then this device
+    /// signs in as that player from now on.
+    /// </summary>
+    Task<GoogleSignInResult> FinishGoogleSignInAsync(string loginId, string loginSecret, bool switchPlayer);
+
+    Task<AccountInfo> GetAccountAsync();
+
     Task<GameConfig> LoadConfigAsync();
 
     Task<GameState> LoadProfileAsync();

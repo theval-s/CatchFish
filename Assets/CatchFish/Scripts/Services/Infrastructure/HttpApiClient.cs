@@ -58,6 +58,31 @@ public class HttpApiClient : IApiClient
 
     public Task StartNewPlayerAsync() => CreateGuestAsync();
 
+    public Task<GoogleSignInStart> BeginGoogleSignInAsync(string loginSecret) =>
+        SendSignedInAsync<GoogleSignInStart>("POST", "/auth/google/begin", new { loginSecret });
+
+    public async Task<GoogleSignInResult> FinishGoogleSignInAsync(string loginId, string loginSecret, bool switchPlayer)
+    {
+        var body = await SendAsync("POST", "/auth/google/finish", new { loginId, loginSecret, switchPlayer }, null);
+        var finish = Json.Deserialize<GoogleFinishResponse>(body);
+        if (finish.Status != "done")
+        {
+            return null;
+        }
+
+        _session = finish.SessionToken;
+        var switched = !string.IsNullOrEmpty(finish.GuestSecret);
+        if (switched)
+        {
+            // The device now plays as the Google account's player, with a guest identity of its own.
+            GuestSecret = finish.GuestSecret;
+        }
+
+        return new GoogleSignInResult { Email = finish.Email, SwitchedPlayer = switched };
+    }
+
+    public Task<AccountInfo> GetAccountAsync() => SendSignedInAsync<AccountInfo>("GET", "/account");
+
     public async Task<GameConfig> LoadConfigAsync() =>
         Json.Deserialize<GameConfig>(await SendAsync("GET", "/config", null, null));
 
@@ -194,6 +219,14 @@ public class HttpApiClient : IApiClient
     private class TimeResponse
     {
         public DateTime Now { get; set; }
+    }
+
+    private class GoogleFinishResponse
+    {
+        public string Status { get; set; }
+        public string SessionToken { get; set; }
+        public string Email { get; set; }
+        public string GuestSecret { get; set; }
     }
 
     private class SessionResponse
