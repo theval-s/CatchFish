@@ -138,4 +138,14 @@ void AddGameRoutes(httplib::Server& server, App& app)
     {
         rules.RefillEnergy(state, now);
     }));
+
+    server.Post("/school/hire", profileAction([](GameState& state, const json& body, const GameRules& rules, Clock::time_point)
+    {
+        rules.HireTutor(state, body.at("classId").get<std::string>());
+    }));
+
+    server.Post("/school/student", profileAction([](GameState& state, const json& body, const GameRules& rules, Clock::time_point)
+    {
+        rules.AddStudent(state, body.at("classId").get<std::string>());
+    }));
 }

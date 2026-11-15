@@ -26,6 +26,9 @@ public class ProfileSyncService
         State = await _api.LoadProfileAsync();
     }
 
+    /// <summary>Fetches the profile again, for changes the server makes over time (the school).</summary>
+    public Task<bool> TryRefreshAsync() => TryApplyAsync(_api.LoadProfileAsync());
+
     /// <summary>
     /// Waits for a backend action and takes the profile it returns. False if the backend refused
     /// the action or couldn't be reached; the state then stays as it was.

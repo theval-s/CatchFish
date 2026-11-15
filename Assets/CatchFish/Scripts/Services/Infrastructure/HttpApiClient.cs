@@ -81,6 +81,12 @@ public class HttpApiClient : IApiClient
 
     public Task<GameState> RefillEnergyAsync() => SendSignedInAsync<GameState>("POST", "/energy/refill");
 
+    public Task<GameState> HireTutorAsync(string classId) =>
+        SendSignedInAsync<GameState>("POST", "/school/hire", new { classId });
+
+    public Task<GameState> AddStudentAsync(string classId) =>
+        SendSignedInAsync<GameState>("POST", "/school/student", new { classId });
+
     private async Task<T> SendSignedInAsync<T>(string method, string path, object body = null)
     {
         if (_session == null)

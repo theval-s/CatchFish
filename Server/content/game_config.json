@@ -34,7 +34,7 @@
     {
       "id": 3,
       "title": "Clean money",
-      "description": "Lyonya needs laundered rubles to open the first class of the school.",
+      "description": "Lyonya wants his cut in clean money. Hire a tutor at the school and let it launder your catch.",
       "requirements": { "lr": 1000 },
       "unlocksId": []
     }
@@ -59,6 +59,17 @@
     ]
   },
   "energy": { "max": 5, "regenMinutes": 20, "runCost": 1, "refillGems": 10 },
+  "school": {
+    "offlineCapMinutes": 480,
+    "classes": [
+      { "id": "python", "title": "Python for Beginners", "tutorCost": { "dr": 300 }, "studentCost": { "lr": 60 }, "studentCostGrowth": 1.35,
+        "maxStudents": 8, "launderBase": 2, "launderPerStudent": 1, "repPerStudent": 1 },
+      { "id": "networks", "title": "Network Security", "tutorCost": { "lr": 1500 }, "studentCost": { "lr": 300 }, "studentCostGrowth": 1.4,
+        "maxStudents": 8, "launderBase": 8, "launderPerStudent": 3, "repPerStudent": 2 },
+      { "id": "carding", "title": "Carding (Theory)", "tutorCost": { "lr": 8000 }, "studentCost": { "lr": 1200 }, "studentCostGrowth": 1.45,
+        "maxStudents": 6, "launderBase": 25, "launderPerStudent": 8, "repPerStudent": 5 }
+    ]
+  },
   "introDialog": [
     { "speaker": "", "text": "Petrovich has a boat, a rod and a family to feed. Fishing licenses are for other people." },
     { "speaker": "Petrovich", "text": "The fish inspectors call it poaching. I call it a family business." },

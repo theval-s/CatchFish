@@ -124,11 +124,16 @@ namespace
         return found != state.upgrades.gearLevels.end() ? found->second : 0;
     }
 
-    // Same arithmetic as GearUpgradeData.CostAt on the client: double power of the float growth,
+    // Same arithmetic as the client's CostAt: double power of the float growth,
     // and nearbyint because C#'s Math.Round rounds halves to even.
+    int ScaledCost(int baseCost, float growth, int level)
+    {
+        return static_cast<int>(std::nearbyint(baseCost * std::pow(static_cast<double>(growth), level)));
+    }
+
     int CostAt(const GearUpgradeData& gear, int level)
     {
-        return static_cast<int>(std::nearbyint(gear.baseCost * std::pow(static_cast<double>(gear.costGrowth), level)));
+        return ScaledCost(gear.baseCost, gear.costGrowth, level);
     }
 
     float ValueAt(const GearUpgradeData& gear, int level)
@@ -168,6 +173,7 @@ GameState GameRules::CreateProfile(Clock::time_point now) const
 bool GameRules::Refresh(GameState& state, Clock::time_point now) const
 {
     const auto energyChanged = SettleEnergy(state, now);
+    const auto schoolChanged = SettleSchool(state, now);
 
     auto& progress = state.quests;
     const auto before = progress.active;
@@ -185,7 +191,83 @@ bool GameRules::Refresh(GameState& state, Clock::time_point now) const
         }
     }
 
-    return progress.active != before || energyChanged;
+    return progress.active != before || energyChanged || schoolChanged;
+}
+
+bool GameRules::SettleSchool(GameState& state, Clock::time_point now) const
+{
+    auto& school = state.school;
+    if (school.lastTransactionAt.empty())
+    {
+        school.lastTransactionAt = FormatTime(now);
+        return true;
+    }
+
+    const auto since = ParseTime(school.lastTransactionAt);
+    const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(now - since).count();
+    if (minutes <= 0)
+    {
+        return false;
+    }
+
+    long long launderRate = 0;
+    long long repRate = 0;
+    for (const auto& data : _config.school.classes)
+    {
+        const auto found = school.classes.find(data.id);
+        if (found != school.classes.end() && found->second.hasTutor)
+        {
+            launderRate += data.launderBase + static_cast<long long>(data.launderPerStudent) * found->second.students;
+            repRate += static_cast<long long>(data.repPerStudent) * found->second.students;
+        }
+    }
+
+    // Only the dirty money the player has can be laundered.
+    const auto counted = std::min<long long>(minutes, _config.school.offlineCapMinutes);
+    auto& player = state.player;
+    const auto laundered = static_cast<int>(std::min<long long>(player.dirtyRubles, launderRate * counted));
+    player.dirtyRubles -= laundered;
+    player.launderedRubles += laundered;
+    player.reputation += static_cast<int>(repRate * counted);
+
+    school.lastTransactionAt = counted < minutes ? FormatTime(now) : FormatTime(since + std::chrono::minutes(minutes));
+    return true;
+}
+
+void GameRules::HireTutor(GameState& state, const std::string& classId) const
+{
+    const auto& data = GetClass(classId);
+    auto& schoolClass = state.school.classes[classId];
+    if (schoolClass.hasTutor)
+    {
+        throw ApiError(409, "tutor_hired", classId);
+    }
+
+    Spend(state.player, data.tutorCost);
+    schoolClass.hasTutor = true;
+}
+
+void GameRules::AddStudent(GameState& state, const std::string& classId) const
+{
+    const auto& data = GetClass(classId);
+    auto& schoolClass = state.school.classes[classId];
+    if (!schoolClass.hasTutor)
+    {
+        throw ApiError(409, "no_tutor", classId);
+    }
+    if (schoolClass.students >= data.maxStudents)
+    {
+        throw ApiError(409, "class_full", classId);
+    }
+
+    std::map<std::string, int> cost;
+    for (const auto& [id, amount] : data.studentCost)
+    {
+        cost[id] = ScaledCost(amount, data.studentCostGrowth, schoolClass.students);
+    }
+
+    Spend(state.player, cost);
+    schoolClass.students++;
 }
 
 bool GameRules::SettleEnergy(GameState& state, Clock::time_point now) const
@@ -517,6 +599,35 @@ void GameRules::Validate() const
     {
         InvalidConfig("energy needs max > 0, regenMinutes > 0, 0 <= runCost <= max and refillGems >= 0");
     }
+
+    if (_config.school.offlineCapMinutes <= 0)
+    {
+        InvalidConfig("school.offlineCapMinutes must be above 0");
+    }
+    std::set<std::string> classIds;
+    for (const auto& data : _config.school.classes)
+    {
+        const auto name = "school class '" + data.id + "'";
+        if (data.id.empty() || !classIds.insert(data.id).second)
+        {
+            InvalidConfig(name + " needs a unique id");
+        }
+        for (const auto* costs : {&data.tutorCost, &data.studentCost})
+        {
+            for (const auto& [id, amount] : *costs)
+            {
+                if (!IsResource(id) || amount < 0)
+                {
+                    InvalidConfig(name + " costs " + std::to_string(amount) + " of '" + id + "'");
+                }
+            }
+        }
+        if (data.studentCostGrowth <= 0 || data.maxStudents < 0 || data.launderBase < 0 || data.launderPerStudent < 0
+            || data.repPerStudent < 0)
+        {
+            InvalidConfig(name + " needs studentCostGrowth > 0 and no negative counts or rates");
+        }
+    }
 }
 
 bool GameRules::IsResource(const std::string& id) const
@@ -561,6 +672,19 @@ const GearUpgradeData* GameRules::FindGear(const std::string& id) const
     }
 
     return nullptr;
+}
+
+const SchoolClassData& GameRules::GetClass(const std::string& id) const
+{
+    for (const auto& data : _config.school.classes)
+    {
+        if (data.id == id)
+        {
+            return data;
+        }
+    }
+
+    throw ApiError(400, "unknown_class", id);
 }
 
 float GameRules::GearValue(const GameState& state, const std::string& gearId) const

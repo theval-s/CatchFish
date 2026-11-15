@@ -198,6 +198,8 @@ Everything except `/config`, `/time` and `/auth/guest…` needs `Authorization: 
 | `POST` | `/runs/complete` | `{ "runId": string, "shotFish": { fishId: count }, "shockedFish": { fishId: count }, "bittenBy": fishId \| null }` | `GameState` with `activeRun` null |
 | `POST` | `/daily/claim` | | `GameState` |
 | `POST` | `/energy/refill` | | `GameState` with full energy |
+| `POST` | `/school/hire` | `{ "classId": string }` | `GameState` |
+| `POST` | `/school/student` | `{ "classId": string }` | `GameState` |
 
 Dev API, every request with the header `X-Dev-Key: <key>`:
 
@@ -217,7 +219,7 @@ The config changes answer with the new config. Errors come back as `{ "error": c
 | Status | `error` | When |
 |-|-|-|
 | 400 | `bad_request` | Malformed JSON or a missing field |
-| 400 | `unknown_gear`, `unknown_quest`, `unknown_fish` | The id isn't in the config |
+| 400 | `unknown_gear`, `unknown_quest`, `unknown_fish`, `unknown_class` | The id isn't in the config |
 | 400 | `invalid_run` | The run's results aren't possible with its gear (see Rules) |
 | 400 | `invalid_config` | A dev change would break the config; `message` says how |
 | 401 | `unauthorized` | No session token, or an unknown one |
@@ -232,13 +234,17 @@ The config changes answer with the new config. Errors come back as `{ "error": c
 | 409 | `already_claimed` | Today's daily reward is already taken |
 | 409 | `not_enough_energy` | Less energy than a run costs |
 | 409 | `energy_full` | Energy is already full |
+| 409 | `tutor_hired` | The class already has its tutor |
+| 409 | `no_tutor` | Students need the class's tutor first |
+| 409 | `class_full` | The class has `maxStudents` already |
 
 ## Rules
 
 - **New player**: the profile starts with the config's `startingQuests` and auto-start quests open,
   everything else at zero.
 - **Every request with a profile** first brings it up to date with the config and the time: auto-start quests
-  the player hasn't done are opened, open quests that no longer exist are dropped, energy regenerates.
+  the player hasn't done are opened, open quests that no longer exist are dropped, energy regenerates,
+  the school pays out.
 - **Energy** (`energy` in the config: `max`, `regenMinutes`, `runCost`, `refillGems`): a profile starts full.
   Below `max`, one point comes back every `regenMinutes` after `energy.updatedAt`; at `max` the timer stops,
   and the run that spends from full restarts it. Refill: spends `refillGems` gems and fills it up.
@@ -246,6 +252,11 @@ The config changes answer with the new config. Errors come back as `{ "error": c
   Spends `dr`, raises the level.
 - **Complete quest**: the quest must be active and every requirement covered. Spends the requirements,
   moves the quest to `completed` and opens the quests in `unlocksId`.
+- **School** (`school` in the config: `offlineCapMinutes`, `classes`). Hiring a class's tutor costs `tutorCost`;
+  each student costs `studentCost * studentCostGrowth^students` (rounded like gear), up to `maxStudents`, and needs
+  the tutor. Every whole minute since `school.lastTransactionAt`, each class with a tutor launders
+  `launderBase + launderPerStudent * students` `dr` into `lr` and earns `repPerStudent * students` `rep`.
+  Only the `dr` the player has can be laundered. At most `offlineCapMinutes` count between two requests.
 - **Start run**: spends `runCost` energy, then records `activeRun`: an id, the start time, and the line length and hook capacity
   at the current gear levels. A new start replaces a run that was never completed.
 - **Complete run**: the client reports which fish were shot, not how much they were worth. The server

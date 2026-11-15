@@ -35,4 +35,8 @@ public interface IApiClient
     Task<GameState> ClaimDailyRewardAsync();
 
     Task<GameState> RefillEnergyAsync();
+
+    Task<GameState> HireTutorAsync(string classId);
+
+    Task<GameState> AddStudentAsync(string classId);
 }

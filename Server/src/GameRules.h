@@ -17,7 +17,8 @@ public:
     GameState CreateProfile(Clock::time_point now) const;
 
     /// Brings a profile up to date with a config that may have changed since it was saved and with
-    /// the time: opens auto-start quests, drops open quests that no longer exist, regenerates energy.
+    /// the time: opens auto-start quests, drops open quests that no longer exist, regenerates energy,
+    /// pays out the school.
     /// True if anything changed.
     bool Refresh(GameState& state, Clock::time_point now) const;
 
@@ -27,10 +28,14 @@ public:
     void CompleteRun(GameState& state, const RunResult& result, Clock::time_point now) const;
     void ClaimDailyReward(GameState& state, Clock::time_point now) const;
     void RefillEnergy(GameState& state, Clock::time_point now) const;
+    void HireTutor(GameState& state, const std::string& classId) const;
+    void AddStudent(GameState& state, const std::string& classId) const;
 
 private:
     void Validate() const;
     bool SettleEnergy(GameState& state, Clock::time_point now) const;
+    bool SettleSchool(GameState& state, Clock::time_point now) const;
+    const SchoolClassData& GetClass(const std::string& id) const;
     bool IsResource(const std::string& id) const;
     const FishType* FindFish(const std::string& id) const;
     const QuestData* FindQuest(int id) const;

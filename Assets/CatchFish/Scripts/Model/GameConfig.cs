@@ -16,6 +16,7 @@ public class GameConfig
     public List<GearUpgradeData> Gear { get; set; } = new List<GearUpgradeData>();
     public DailyRewardTrack DailyRewards { get; set; } = new DailyRewardTrack();
     public EnergyConfig Energy { get; set; } = new EnergyConfig();
+    public SchoolConfig School { get; set; } = new SchoolConfig();
 
     /// <summary>Shown in the hub before the first run.</summary>
     public List<DialogLine> IntroDialog { get; set; } = new List<DialogLine>();
@@ -91,6 +92,49 @@ public class EnergyConfig
     public int RegenMinutes { get; set; } = 20;
     public int RunCost { get; set; } = 1;
     public int RefillGems { get; set; } = 10;
+}
+
+/// <summary>The school: classes that launder dirty rubles and earn reputation every minute.</summary>
+public class SchoolConfig
+{
+    /// <summary>The most minutes the server counts between two requests.</summary>
+    public int OfflineCapMinutes { get; set; }
+
+    public List<SchoolClassData> Classes { get; set; } = new List<SchoolClassData>();
+}
+
+/// <summary>A school class: hire its tutor, then recruit students.</summary>
+public class SchoolClassData
+{
+    public string Id { get; set; }
+    public string Title { get; set; }
+    public Dictionary<string, int> TutorCost { get; set; } = new Dictionary<string, int>();
+
+    /// <summary>The price of the first student; each next one costs <see cref="StudentCostGrowth"/> times more.</summary>
+    public Dictionary<string, int> StudentCost { get; set; } = new Dictionary<string, int>();
+
+    public float StudentCostGrowth { get; set; } = 1f;
+    public int MaxStudents { get; set; }
+
+    // Per minute, while the class has its tutor.
+    public int LaunderBase { get; set; }
+    public int LaunderPerStudent { get; set; }
+    public int RepPerStudent { get; set; }
+
+    public Dictionary<string, int> StudentCostAt(int students)
+    {
+        var cost = new Dictionary<string, int>();
+        foreach (var pair in StudentCost)
+        {
+            cost[pair.Key] = (int)Math.Round(pair.Value * Math.Pow(StudentCostGrowth, students));
+        }
+
+        return cost;
+    }
+
+    public int LaunderAt(int students) => LaunderBase + LaunderPerStudent * students;
+
+    public int RepAt(int students) => RepPerStudent * students;
 }
 
 /// <summary>One fishing gear upgrade track: value grows linearly, price grows exponentially.</summary>

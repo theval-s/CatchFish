@@ -12,6 +12,7 @@ public class GameState
     public UpgradeProgressState Upgrades { get; set; } = new UpgradeProgressState();
     public DailyRewardState Daily { get; set; } = new DailyRewardState();
     public EnergyState Energy { get; set; } = new EnergyState();
+    public SchoolState School { get; set; } = new SchoolState();
 
     /// <summary>The fishing run the backend expects results for, or null.</summary>
     public ActiveRunState ActiveRun { get; set; }
@@ -121,4 +122,19 @@ public class EnergyState
 
     /// <summary>When the next point started to regenerate (server time).</summary>
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>The player's school classes; the server pays them out on every request.</summary>
+public class SchoolState
+{
+    /// <summary>Class id → state; untouched classes aren't here.</summary>
+    public Dictionary<string, SchoolClassState> Classes { get; set; } = new Dictionary<string, SchoolClassState>();
+
+    public DateTime LastTransactionAt { get; set; }
+}
+
+public class SchoolClassState
+{
+    public bool HasTutor { get; set; }
+    public int Students { get; set; }
 }

@@ -11,8 +11,10 @@ public class HubMenuView : MonoBehaviour
     [Header("Tabs")]
     [SerializeField] private GameObject homePanel;
     [SerializeField] private GameObject questsPanel;
+    [SerializeField] private GameObject schoolPanel;
     [SerializeField] private Button homeTabButton;
     [SerializeField] private Button questsTabButton;
+    [SerializeField] private Button schoolTabButton;
     [SerializeField] private GameObject questsBadge;
     [SerializeField] private Button goFishingButton;
 
@@ -41,7 +43,7 @@ public class HubMenuView : MonoBehaviour
         }
     }
 
-    /// <summary>Before the first run only "Go fishing" works: the Quests tab and the tackle shop are locked.</summary>
+    /// <summary>Before the first run only "Go fishing" works: the other tabs and the tackle shop are locked.</summary>
     public void SetFirstRunMode(bool isFirstRun)
     {
         _firstRunMode = isFirstRun;
@@ -57,21 +59,25 @@ public class HubMenuView : MonoBehaviour
 
     public void GoFishing() => GoFishingClicked?.Invoke();
 
-    public void ShowHome() => ShowTab(home: true);
+    public void ShowHome() => ShowTab(homePanel);
 
-    public void ShowQuests() => ShowTab(home: false);
+    public void ShowQuests() => ShowTab(questsPanel);
+
+    public void ShowSchool() => ShowTab(schoolPanel);
 
     public void OpenTackle() => tacklePanel.SetActive(true);
 
     public void CloseTackle() => tacklePanel.SetActive(false);
 
-    private void ShowTab(bool home)
+    private void ShowTab(GameObject panel)
     {
-        homePanel.SetActive(home);
-        questsPanel.SetActive(!home);
+        homePanel.SetActive(panel == homePanel);
+        questsPanel.SetActive(panel == questsPanel);
+        schoolPanel.SetActive(panel == schoolPanel);
 
         // The open tab's button is disabled so it reads as selected.
-        homeTabButton.interactable = !home;
-        questsTabButton.interactable = home && !_firstRunMode;
+        homeTabButton.interactable = panel != homePanel;
+        questsTabButton.interactable = panel != questsPanel && !_firstRunMode;
+        schoolTabButton.interactable = panel != schoolPanel && !_firstRunMode;
     }
 }

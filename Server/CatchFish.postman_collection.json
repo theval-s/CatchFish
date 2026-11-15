@@ -194,6 +194,50 @@
           }
         },
         {
+          "name": "Hire tutor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/school/hire",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classId\": \"python\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/school/student",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classId\": \"python\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
           "name": "Buy gear",
           "request": {
             "method": "POST",
