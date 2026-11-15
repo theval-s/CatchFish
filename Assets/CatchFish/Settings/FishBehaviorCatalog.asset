@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d51b788f27f49dda09ced15fa762a31, type: 3}
+  m_Name: FishBehaviorCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::FishBehaviorCatalog
+  profiles:
+  - fishIds:
+    - f1
+    - f2
+    - f5
+    - f7
+    settings:
+      pattern: 0
+      airborneHits: 1
+  - fishIds:
+    - f3
+    settings:
+      pattern: 0
+      school: 1
+      schoolMin: 3
+      schoolMax: 5
+      schoolVerticalOffset: 0.2
+      schoolSpacing: 0.2
+      schoolGap: 1.2
+      airborneHits: 1
+  - fishIds:
+    - f4
+    settings:
+      pattern: 2
+      idleMin: 2.5
+      idleMax: 4
+      warningSeconds: 0.3
+      activeSeconds: 0.6
+      speedMultiplier: 3
+      recoverySeconds: 0.8
+      airborneHits: 1
+  - fishIds:
+    - f6
+    settings:
+      pattern: 1
+      waveAmplitude: 0.25
+      wavePeriod: 4.5
+      airborneHits: 1
+  - fishIds:
+    - f8
+    settings:
+      pattern: 1
+      waveAmplitude: 0.45
+      wavePeriod: 3.2
+      airborneHits: 1
+  - fishIds:
+    - f9
+    settings:
+      pattern: 4
+      idleMin: 3
+      idleMax: 5
+      warningSeconds: 0.5
+      activeSeconds: 2
+      inflatedScale: 1.65
+      recoverySeconds: 1
+      airborneHits: 1
+  - fishIds:
+    - f10
+    settings:
+      pattern: 3
+      triggerDistance: 2
+      warningSeconds: 0.4
+      activeSeconds: 0.5
+      speedMultiplier: 3
+      recoverySeconds: 2
+      airborneHits: 1
+  - fishIds:
+    - f11
+    settings:
+      pattern: 0
+      airborneHits: 3
+  - fishIds:
+    - f12
+    settings:
+      pattern: 2
+      idleMin: 3
+      idleMax: 5
+      warningSeconds: 0.5
+      activeSeconds: 0.8
+      speedMultiplier: 3.5
+      recoverySeconds: 1.2
+      airborneHits: 1

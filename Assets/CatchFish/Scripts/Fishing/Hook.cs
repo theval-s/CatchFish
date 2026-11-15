@@ -11,6 +11,10 @@ public class Hook : MonoBehaviour
     [SerializeField] private float hitRadius = 0.3f;
     [SerializeField] private float catchRadius = 0.55f;
 
+    [Header("Catch attachment")]
+    [Tooltip("Hook-local point where caught fish hold on by their mouths; match the tip of HookVisual.")]
+    [SerializeField] private Vector2 catchPoint = new Vector2(0f, -0.18f);
+
     [Header("Line")]
     [Tooltip("The rod tip the line hangs from, in world space: match it to the rod in Surface.prefab.")]
     [SerializeField] private Vector2 lineStart = new Vector2(0.6f, 0.9f);
@@ -96,7 +100,7 @@ public class Hook : MonoBehaviour
         }
 
         _caught.Add(fish);
-        fish.AttachToHook(transform, new Vector3(0f, -0.3f * _caught.Count, 0f));
+        fish.AttachToHook(transform, catchPoint);
         return true;
     }
 
