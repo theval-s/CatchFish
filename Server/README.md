@@ -92,13 +92,6 @@ phone ──https──▶ router :1337 ──▶ laptop: Caddy :1337 ──http
 
 **1. DNS and router** (once)
 
-- At Selectel (the DNS host for `thevals.ru`), add `fish.thevals.ru`: an A record to the home IP like `foundry`'s
-  (`188.242.226.0` on 2026-11-03), or a CNAME to `foundry.thevals.ru` so both follow if the IP changes.
-- On the router, forward TCP **1337** and TCP **80** to the laptop. Port 80 is for Let's Encrypt: it checks the
-  domain there (never on 1337) when issuing the certificate and at every renewal, about every 60 days.
-  Without port 80 the alternative is the DNS challenge: a Caddy build with a Selectel DNS module
-  (look for "selectel" on [caddyserver.com/download](https://caddyserver.com/download)) and a Selectel API token.
-
 **2. Build the server** (on the laptop)
 
 ```bash
