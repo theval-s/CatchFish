@@ -120,6 +120,7 @@ Storage::~Storage()
 //   0  the first server: players(id, token, profile, created_at, updated_at), the token was the account.
 //   1  players without the token, plus identities, sessions and content. Each old token became the
 //      secret of a guest identity, so clients that kept it can still sign in.
+//   2  google_logins for sign-ins in progress, and identities.label (the Google account's email).
 void Storage::Migrate()
 {
     std::int64_t version;
@@ -129,11 +130,32 @@ void Storage::Migrate()
         version = pragma.Int64(0);
     }
 
-    if (version >= 1)
+    if (version < 1)
     {
-        return;
+        MigrateToV1();
     }
 
+    if (version < 2)
+    {
+        Transaction transaction(*this);
+        Exec("ALTER TABLE identities ADD COLUMN label TEXT NOT NULL DEFAULT ''");
+        Exec("CREATE TABLE google_logins ("
+             "  id TEXT PRIMARY KEY,"
+             "  secret_hash TEXT NOT NULL,"
+             "  link_player_id INTEGER NOT NULL,"
+             "  created_at TEXT NOT NULL,"
+             "  expires_at TEXT NOT NULL,"
+             "  status TEXT NOT NULL,"
+             "  player_id INTEGER NOT NULL,"
+             "  email TEXT NOT NULL,"
+             "  error TEXT NOT NULL)");
+        Exec("PRAGMA user_version = 2");
+        transaction.Commit();
+    }
+}
+
+void Storage::MigrateToV1()
+{
     Transaction transaction(*this);
 
     Exec("CREATE TABLE identities ("
@@ -244,14 +266,86 @@ std::vector<Storage::PlayerRow> Storage::ListPlayers(int limit)
 }
 
 void Storage::AddIdentity(const std::string& provider, const std::string& subject, std::int64_t playerId,
-    const std::string& createdAt)
+    const std::string& createdAt, const std::string& label)
 {
-    Statement insert(_db, "INSERT INTO identities (provider, subject, player_id, created_at) VALUES (?, ?, ?, ?)");
+    Statement insert(_db,
+        "INSERT INTO identities (provider, subject, player_id, created_at, label) VALUES (?, ?, ?, ?, ?)");
     insert.Bind(1, provider);
     insert.Bind(2, subject);
     insert.Bind(3, playerId);
     insert.Bind(4, createdAt);
+    insert.Bind(5, label);
     insert.Step();
+}
+
+std::vector<Storage::IdentityRow> Storage::ListIdentities(std::int64_t playerId)
+{
+    Statement select(_db, "SELECT provider, label FROM identities WHERE player_id = ? ORDER BY created_at");
+    select.Bind(1, playerId);
+
+    std::vector<IdentityRow> rows;
+    while (select.Step())
+    {
+        rows.push_back({select.Text(0), select.Text(1)});
+    }
+
+    return rows;
+}
+
+void Storage::AddGoogleLogin(const GoogleLogin& login, const std::string& createdAt)
+{
+    Statement insert(_db,
+        "INSERT INTO google_logins (id, secret_hash, link_player_id, created_at, expires_at, status, player_id, email, error)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    insert.Bind(1, login.id);
+    insert.Bind(2, login.secretHash);
+    insert.Bind(3, login.linkPlayerId);
+    insert.Bind(4, createdAt);
+    insert.Bind(5, login.expiresAt);
+    insert.Bind(6, login.status);
+    insert.Bind(7, login.playerId);
+    insert.Bind(8, login.email);
+    insert.Bind(9, login.error);
+    insert.Step();
+}
+
+std::optional<Storage::GoogleLogin> Storage::FindGoogleLogin(const std::string& id)
+{
+    Statement select(_db,
+        "SELECT id, secret_hash, link_player_id, expires_at, status, player_id, email, error FROM google_logins WHERE id = ?");
+    select.Bind(1, id);
+    if (!select.Step())
+    {
+        return std::nullopt;
+    }
+
+    return GoogleLogin{select.Text(0), select.Text(1), select.Int64(2), select.Text(3), select.Text(4), select.Int64(5),
+        select.Text(6), select.Text(7)};
+}
+
+void Storage::UpdateGoogleLogin(const GoogleLogin& login)
+{
+    Statement update(_db, "UPDATE google_logins SET status = ?, player_id = ?, email = ?, error = ? WHERE id = ?");
+    update.Bind(1, login.status);
+    update.Bind(2, login.playerId);
+    update.Bind(3, login.email);
+    update.Bind(4, login.error);
+    update.Bind(5, login.id);
+    update.Step();
+}
+
+void Storage::DeleteGoogleLogin(const std::string& id)
+{
+    Statement remove(_db, "DELETE FROM google_logins WHERE id = ?");
+    remove.Bind(1, id);
+    remove.Step();
+}
+
+void Storage::DeleteGoogleLoginsExpiredBy(const std::string& now)
+{
+    Statement remove(_db, "DELETE FROM google_logins WHERE expires_at <= ?");
+    remove.Bind(1, now);
+    remove.Step();
 }
 
 std::optional<std::int64_t> Storage::FindIdentity(const std::string& provider, const std::string& subject)

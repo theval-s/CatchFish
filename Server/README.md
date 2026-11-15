@@ -7,7 +7,8 @@ uploads a profile, and the game can't run without a server.
 
 C++17, [cpp-httplib](https://github.com/yhirose/cpp-httplib), [nlohmann/json](https://github.com/nlohmann/json),
 SQLite and [PicoSHA2](https://github.com/okdshin/PicoSHA2). CMake downloads all of them on the first configure,
-so all you need is CMake and a C++ compiler.
+so all you need is CMake, a C++ compiler and OpenSSL (for the HTTPS calls to Google): `libssl-dev` on Debian,
+`brew install openssl` on a Mac.
 
 | File | What it does |
 |-|-|
@@ -15,7 +16,8 @@ so all you need is CMake and a C++ compiler.
 | `src/GameApi.cpp` | Routes the game uses: sign-in, config, profile, player actions |
 | `src/DevApi.cpp` | `/dev/…` routes for the team: live config, players |
 | `src/GameRules.cpp` | The rules below, and checking a config before it goes live |
-| `src/Accounts.cpp` | Guest sign-in and sessions |
+| `src/Accounts.cpp` | Guest and Google sign-in, sessions |
+| `src/GoogleAuth.cpp` | The calls to Google: the sign-in page's address, trading the code for the account |
 | `src/Content.cpp` | The live config: loaded from the database, seeded from `content/game_config.json` |
 | `src/Storage.cpp` | SQLite tables and their migrations |
 | `src/Model.h` | C++ copies of the client's `GameConfig`, `GameState` and `RunResult` |
@@ -36,9 +38,14 @@ CATCHFISH_DEV_KEY=<a long random key> Server/build/catchfish-server
 | `--port <n>` | `8080` |
 | `--db <path>` | `Server/catchfish.db` (delete it to wipe all players and the live config) |
 | `--config <path>` | `Server/content/game_config.json`. Read only when the database has no config yet |
+| `--public-url <url>` | `http://localhost:<port>`. Where players' browsers reach the server, for Google's redirect |
 
 `CATCHFISH_DEV_KEY` (an environment variable, at least 16 characters) turns on the dev API. Without it every
 `/dev/…` request answers 404. Make one with `openssl rand -hex 32`. It's the only thing protecting the dev API.
+
+`CATCHFISH_GOOGLE_CLIENT_ID` and `CATCHFISH_GOOGLE_SECRET` turn on Google sign-in (see Accounts and sessions);
+without them `/auth/google/begin` answers 503 `google_off`. `CATCHFISH_GOOGLE_AUTH_URL` and
+`CATCHFISH_GOOGLE_TOKEN_URL` replace Google's endpoints, for testing against a stand-in.
 
 ## Connecting the client
 
@@ -52,7 +59,7 @@ Android builds refuse plain `http://`, so builds always use the hosted address.
 ## Accounts and sessions
 
 A **player** has **identities**, the ways they sign in, and **sessions**, the bearer token every game request
-carries. Today the only identity is a guest; Google sign-in would be another identity on the same player.
+carries. Identities are guests (one per device) and Google accounts (at most one per player).
 
 1. On first launch the client calls `POST /auth/guest` and gets a `guestSecret` (kept on the device) and a session.
 2. On later launches it signs in with the secret: `POST /auth/guest/login` → a new session.
@@ -60,6 +67,25 @@ carries. Today the only identity is a guest; Google sign-in would be another ide
 4. If the server doesn't know the secret (`invalid_credentials`), the client does **not** quietly make a new player:
    the startup screen says so and offers Retry or "Start as new player". A server started on the wrong database
    would otherwise lose every player that connected to it.
+
+**Google sign-in** runs through the server, so it works the same on every platform: the game only opens a
+browser and waits.
+
+1. The game makes a random `loginSecret` and calls `POST /auth/google/begin`. With a session, the Google account
+   will be added to that player ("link"); without one, it signs in as whoever has the account (or a new player).
+   It gets a `loginId` and Google's sign-in `url`, and opens the url in the system browser.
+2. Google sends the browser back to `<public url>/auth/google/callback`. The server trades the code for the
+   account's ID token with the client secret (straight from Google over HTTPS, so the token's signature isn't
+   checked; its audience, issuer and expiry are), links or finds the player, and shows a page saying to go back.
+3. Meanwhile the game polls `POST /auth/google/finish` with the `loginId` and `loginSecret`:
+   `{ "status": "pending" }` until the callback, then a session. If the Google account already belongs to another
+   player, it gets 409 `identity_taken`; with `"switchPlayer": true` it signs in as that player instead.
+4. When the device ends up as another player (switch, or a sign-in without link), the reply has a `guestSecret`:
+   a new guest identity of that player, which the device keeps instead of its old one.
+
+A sign-in can be collected once and only with its `loginSecret`, and expires after 10 minutes. Whoever started it
+gets the session, so a player who finishes a sign-in link someone else sent them signs that person in; the game
+never asks players to open links from others.
 
 Guest secrets and session tokens are 256-bit random values. The database stores only their SHA-256, so a copy
 of it doesn't let anyone sign in.
@@ -95,7 +121,7 @@ phone ──https──▶ router :1337 ──▶ laptop: Caddy :1337 ──http
 **2. Build the server** (on the laptop)
 
 ```bash
-sudo apt install build-essential cmake git
+sudo apt install build-essential cmake git libssl-dev
 git clone --filter=blob:none --sparse https://github.com/theval-s/CatchFish.git ~/CatchFish
 cd ~/CatchFish
 git sparse-checkout set Server
@@ -116,6 +142,17 @@ systemctl --user daemon-reload
 systemctl --user enable --now catchfish
 sudo loginctl enable-linger $USER
 ```
+
+For Google sign-in, add the Web client's id and secret from the Google Cloud console to the same file:
+
+```bash
+echo "CATCHFISH_GOOGLE_CLIENT_ID=<client id>" >> ~/.config/catchfish.env
+echo "CATCHFISH_GOOGLE_SECRET=<client secret>" >> ~/.config/catchfish.env
+systemctl --user restart catchfish
+```
+
+The service passes `--public-url https://fish.thevals.ru:1337`, so Google's redirect URI is
+`https://fish.thevals.ru:1337/auth/google/callback`; register exactly that in the console.
 
 `enable-linger` keeps your user's services running without a login. Logs: `journalctl --user -u catchfish -f`.
 Check: `curl http://127.0.0.1:8080/time`. If something else already uses 8080 there, add `--port` to `ExecStart`
@@ -175,7 +212,7 @@ JSON everywhere, camelCase field names, the same shapes as the client's `GameCon
 Times are ISO 8601 UTC strings (`2026-11-03T12:00:00.000Z`). Give every POST a body, `{}` at least:
 cpp-httplib waits 5 s for a body when there's no `Content-Length`.
 
-Everything except `/config`, `/time` and `/auth/guest…` needs `Authorization: Bearer <sessionToken>`.
+Everything except `/config`, `/time`, `/auth/guest…` and `/auth/google…` needs `Authorization: Bearer <sessionToken>`.
 
 | Method | Path | Body | Returns |
 |-|-|-|-|
@@ -184,6 +221,10 @@ Everything except `/config`, `/time` and `/auth/guest…` needs `Authorization: 
 | `POST` | `/auth/guest` | | `{ "guestSecret", "playerId", "sessionToken", "expiresAt" }`: a new player |
 | `POST` | `/auth/guest/login` | `{ "guestSecret": string }` | `{ "playerId", "sessionToken", "expiresAt" }` |
 | `POST` | `/auth/logout` | | `{}`; this session stops working |
+| `POST` | `/auth/google/begin` | `{ "loginSecret": string }` (32+ chars), session optional | `{ "loginId", "url" }` |
+| `GET` | `/auth/google/callback` | `?code&state` from Google | An HTML page for the browser |
+| `POST` | `/auth/google/finish` | `{ "loginId", "loginSecret", "switchPlayer": bool }` | `{ "status": "pending" }`, or `{ "status": "done", "playerId", "sessionToken", "expiresAt", "email", "guestSecret" }` |
+| `GET` | `/account` | | `{ "playerId", "google": email \| null }` |
 | `GET` | `/profile` | | `GameState` |
 | `POST` | `/gear/buy` | `{ "gearId": string }` | `GameState` |
 | `POST` | `/quests/complete` | `{ "questId": int }` | `GameState` |
@@ -220,6 +261,10 @@ The config changes answer with the new config. Errors come back as `{ "error": c
 | 401 | `unauthorized` | No session token, or an unknown one |
 | 401 | `session_expired` | The session is over 30 days old: sign in again |
 | 401 | `invalid_credentials` | No player has this guest secret |
+| 401 | `google_failed` | The Google sign-in was cancelled or refused; `message` says why |
+| 400 | `login_expired` | The Google sign-in is older than 10 minutes |
+| 409 | `identity_taken` | The Google account belongs to another player; `message` is its email |
+| 503 | `google_off` | The server has no Google client configured |
 | 403 | `forbidden` | Wrong or missing `X-Dev-Key` |
 | 404 | `not_found` | Unknown path, player or quest; or the dev API is off |
 | 409 | `gear_maxed` | The gear is already at its max level |
@@ -288,10 +333,12 @@ The config changes answer with the new config. Errors come back as `{ "error": c
 | Table | Rows |
 |-|-|
 | `players` | `id`, `profile` (the `GameState` as JSON), `created_at`, `updated_at` |
-| `identities` | `provider` (`guest`; later `google`), `subject` (for a guest: the SHA-256 of the secret), `player_id` |
+| `identities` | `provider` (`guest` or `google`), `subject` (guest: the SHA-256 of the secret; Google: the account id), `player_id`, `label` (the Google email) |
+| `google_logins` | Google sign-ins in progress: `id` (also the OAuth state), the login secret's SHA-256, the player to link, `status`, the result; deleted when collected or expired |
 | `sessions` | `token_hash` (SHA-256), `player_id`, `created_at`, `expires_at`; expired ones are deleted at sign-in |
 | `content` | One row: the live config as JSON and its `version` |
 
 `PRAGMA user_version` holds the schema version, and `Storage::Migrate` upgrades older databases on start.
 Version 1 came from the first server, where a token in `players` was the whole account: each token became a
 guest secret, so clients that kept it still sign in (the client moves its old `CatchFish.ServerToken` over).
+Version 2 added `google_logins` and `identities.label`.

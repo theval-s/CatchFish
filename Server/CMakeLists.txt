@@ -7,8 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 
-# Plain HTTP is enough for a local or LAN server, so cpp-httplib is built without TLS and compression.
-set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+# The server itself speaks plain HTTP (Caddy adds TLS in front), but Google sign-in calls Google over HTTPS,
+# so cpp-httplib needs OpenSSL: libssl-dev on Debian, `brew install openssl` on a Mac.
+if(APPLE AND NOT OPENSSL_ROOT_DIR AND EXISTS /opt/homebrew/opt/openssl@3)
+    set(OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl@3)
+endif()
+set(HTTPLIB_REQUIRE_OPENSSL ON CACHE BOOL "" FORCE)
 set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
 set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
 set(HTTPLIB_INSTALL OFF CACHE BOOL "" FORCE)
@@ -46,6 +50,7 @@ add_executable(catchfish-server
     src/DevApi.cpp
     src/GameApi.cpp
     src/GameRules.cpp
+    src/GoogleAuth.cpp
     src/Http.cpp
     src/Storage.cpp
     src/TimeFormat.cpp)

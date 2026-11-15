@@ -28,6 +28,29 @@ public:
         GameState profile;
     };
 
+    struct IdentityRow
+    {
+        std::string provider;
+        // For people: the Google account's email; empty for guests.
+        std::string label;
+    };
+
+    /// A Google sign-in in progress: started by the game, finished by Google's callback, collected by
+    /// the game with the login secret.
+    struct GoogleLogin
+    {
+        std::string id;
+        std::string secretHash;
+        // The player to add the Google account to; 0 = sign in as whoever has it.
+        std::int64_t linkPlayerId = 0;
+        std::string expiresAt;
+        // "pending" (waiting for Google), "done", "taken" (the account is another player's), "failed".
+        std::string status = "pending";
+        std::int64_t playerId = 0;
+        std::string email;
+        std::string error;
+    };
+
     struct ContentRow
     {
         std::string config;
@@ -67,8 +90,16 @@ public:
 
     /// provider = "guest" (later "google"…), subject = who they are to that provider.
     void AddIdentity(const std::string& provider, const std::string& subject, std::int64_t playerId,
-        const std::string& createdAt);
+        const std::string& createdAt, const std::string& label = "");
     std::optional<std::int64_t> FindIdentity(const std::string& provider, const std::string& subject);
+    std::vector<IdentityRow> ListIdentities(std::int64_t playerId);
+
+    void AddGoogleLogin(const GoogleLogin& login, const std::string& createdAt);
+    std::optional<GoogleLogin> FindGoogleLogin(const std::string& id);
+    /// Saves the status, player, email and error.
+    void UpdateGoogleLogin(const GoogleLogin& login);
+    void DeleteGoogleLogin(const std::string& id);
+    void DeleteGoogleLoginsExpiredBy(const std::string& now);
 
     void AddSession(const std::string& tokenHash, std::int64_t playerId, const std::string& createdAt,
         const std::string& expiresAt);
@@ -82,6 +113,7 @@ public:
 private:
     void Exec(const char* sql);
     void Migrate();
+    void MigrateToV1();
 
     sqlite3* _db = nullptr;
 };

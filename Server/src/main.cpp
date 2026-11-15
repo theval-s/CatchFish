@@ -24,6 +24,8 @@ namespace
         // Only read when the database has no config yet; after that the dev API changes it.
         std::string seedConfigPath = CATCHFISH_DEFAULT_CONFIG;
         std::string dbPath = CATCHFISH_DEFAULT_DB;
+        // Where players' browsers reach the server, for Google's redirect; http://localhost:<port> if empty.
+        std::string publicUrl;
     };
 
     Options ReadOptions(int argc, char** argv)
@@ -48,6 +50,10 @@ namespace
             else if (name == "--db")
             {
                 options.dbPath = value;
+            }
+            else if (name == "--public-url")
+            {
+                options.publicUrl = value;
             }
             else
             {
@@ -74,6 +80,35 @@ namespace
         return key;
     }
 
+    std::string Env(const char* name)
+    {
+        const char* value = std::getenv(name);
+        return value != nullptr ? value : "";
+    }
+
+    // Secrets come from the environment, like the dev key. The endpoint overrides are for tests.
+    GoogleAuth::Config ReadGoogleConfig(const Options& options)
+    {
+        GoogleAuth::Config config;
+        config.clientId = Env("CATCHFISH_GOOGLE_CLIENT_ID");
+        config.clientSecret = Env("CATCHFISH_GOOGLE_SECRET");
+        config.publicUrl = options.publicUrl.empty() ? "http://localhost:" + std::to_string(options.port) : options.publicUrl;
+        while (!config.publicUrl.empty() && config.publicUrl.back() == '/')
+        {
+            config.publicUrl.pop_back();
+        }
+        if (!Env("CATCHFISH_GOOGLE_AUTH_URL").empty())
+        {
+            config.authUrl = Env("CATCHFISH_GOOGLE_AUTH_URL");
+        }
+        if (!Env("CATCHFISH_GOOGLE_TOKEN_URL").empty())
+        {
+            config.tokenUrl = Env("CATCHFISH_GOOGLE_TOKEN_URL");
+        }
+
+        return config;
+    }
+
     void ExitNow(int)
     {
         std::_Exit(0);
@@ -83,7 +118,7 @@ namespace
 int Run(int argc, char** argv)
 {
     const auto options = ReadOptions(argc, argv);
-    App app(options.dbPath, options.seedConfigPath, ReadDevKey());
+    App app(options.dbPath, options.seedConfigPath, ReadDevKey(), ReadGoogleConfig(options));
 
     httplib::Server server;
 
@@ -115,9 +150,12 @@ int Run(int argc, char** argv)
     std::signal(SIGTERM, ExitNow);
     std::signal(SIGINT, ExitNow);
 
-    std::printf("CatchFish server on http://%s:%d\n  database: %s\n  config: version %d\n  dev API: %s\n",
+    std::printf("CatchFish server on http://%s:%d\n  database: %s\n  config: version %d\n  dev API: %s\n"
+        "  Google sign-in: %s\n",
         options.host.c_str(), options.port, options.dbPath.c_str(), app.content.Version(),
-        app.devKey.empty() ? "off (set CATCHFISH_DEV_KEY to turn it on)" : "on");
+        app.devKey.empty() ? "off (set CATCHFISH_DEV_KEY to turn it on)" : "on",
+        app.google.Enabled() ? ("on, redirect " + app.google.RedirectUri()).c_str()
+                             : "off (set CATCHFISH_GOOGLE_CLIENT_ID and CATCHFISH_GOOGLE_SECRET)");
     std::fflush(stdout);
 
     if (!server.listen(options.host, options.port))

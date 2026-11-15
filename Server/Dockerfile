@@ -4,7 +4,7 @@
 
 FROM debian:12-slim AS build
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential cmake ca-certificates \
+    && apt-get install -y --no-install-recommends build-essential cmake ca-certificates libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY CMakeLists.txt ./
@@ -13,6 +13,10 @@ RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j"$(nproc)"
 
 FROM debian:12-slim
+# OpenSSL and the CA list, for the HTTPS calls to Google.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libssl3 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 RUN useradd --system --no-create-home catchfish \
     && mkdir /data \
     && chown catchfish /data

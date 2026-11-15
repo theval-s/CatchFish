@@ -5,9 +5,10 @@
 Description=CatchFish game server
 
 [Service]
-# CATCHFISH_DEV_KEY=… turns on the dev API; without the file the server runs with it off.
+# CATCHFISH_DEV_KEY=… turns on the dev API; CATCHFISH_GOOGLE_CLIENT_ID=… and CATCHFISH_GOOGLE_SECRET=…
+# turn on Google sign-in. Without the file the server runs with both off.
 EnvironmentFile=-%h/.config/catchfish.env
-ExecStart=%h/CatchFish/Server/build/catchfish-server
+ExecStart=%h/CatchFish/Server/build/catchfish-server --public-url https://fish.thevals.ru:1337
 Restart=on-failure
 RestartSec=5
 

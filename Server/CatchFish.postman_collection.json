@@ -142,6 +142,58 @@
           ]
         },
         {
+          "name": "Begin Google sign-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/google/begin",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loginSecret\": \"make 64 random hex characters and paste them here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Finish Google sign-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/google/finish",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loginId\": \"paste loginId from Begin Google sign-in\",\n  \"loginSecret\": \"the same secret\",\n  \"switchPlayer\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/account"
+          }
+        },
+        {
           "name": "Profile",
           "request": {
             "method": "GET",
