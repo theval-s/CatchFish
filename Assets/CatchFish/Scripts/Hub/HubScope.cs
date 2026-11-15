@@ -13,6 +13,8 @@ public class HubScope : LifetimeScope
     [SerializeField] private EnergyView energy;
     [SerializeField] private DialogView introDialog;
     [SerializeField] private SchoolView school;
+    [SerializeField] private HomeView home;
+    [SerializeField] private HomeObjectView homeObject;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -24,6 +26,8 @@ public class HubScope : LifetimeScope
         builder.RegisterComponent(energy);
         builder.RegisterComponent(introDialog);
         builder.RegisterComponent(school);
+        builder.RegisterComponent(home);
+        builder.RegisterComponent(homeObject);
 
         builder.RegisterEntryPoint<CurrencyBarPresenter>();
         builder.RegisterEntryPoint<HubMenuPresenter>();
@@ -33,5 +37,6 @@ public class HubScope : LifetimeScope
         builder.RegisterEntryPoint<EnergyPresenter>();
         builder.RegisterEntryPoint<IntroDialogPresenter>();
         builder.RegisterEntryPoint<SchoolPresenter>();
+        builder.RegisterEntryPoint<HomePresenter>();
     }
 }

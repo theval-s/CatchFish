@@ -43,5 +43,6 @@ public class RootScope : LifetimeScope
         builder.Register<QuestService>(Lifetime.Singleton);
         builder.Register<DailyRewardService>(Lifetime.Singleton);
         builder.Register<SchoolService>(Lifetime.Singleton);
+        builder.Register<HomeService>(Lifetime.Singleton);
     }
 }

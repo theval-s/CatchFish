@@ -238,6 +238,50 @@
           }
         },
         {
+          "name": "Upgrade home object",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/home/upgrade",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objectId\": \"wife\",\n  \"useGems\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Level up home object",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/home/levelup",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objectId\": \"wife\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
           "name": "Buy gear",
           "request": {
             "method": "POST",

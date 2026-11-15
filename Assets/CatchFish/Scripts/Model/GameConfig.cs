@@ -17,6 +17,10 @@ public class GameConfig
     public DailyRewardTrack DailyRewards { get; set; } = new DailyRewardTrack();
     public EnergyConfig Energy { get; set; } = new EnergyConfig();
     public SchoolConfig School { get; set; } = new SchoolConfig();
+    public List<HomeObjectData> Home { get; set; } = new List<HomeObjectData>();
+
+    /// <summary>What one gem pays for when a home upgrade is short of laundered rubles.</summary>
+    public int LrPerGem { get; set; } = 50;
 
     /// <summary>Shown in the hub before the first run.</summary>
     public List<DialogLine> IntroDialog { get; set; } = new List<DialogLine>();
@@ -135,6 +139,29 @@ public class SchoolClassData
     public int LaunderAt(int students) => LaunderBase + LaunderPerStudent * students;
 
     public int RepAt(int students) => RepPerStudent * students;
+}
+
+/// <summary>An upgradable home object (wife, son, pug, apartment). Its last level is the top one.</summary>
+public class HomeObjectData
+{
+    public string Id { get; set; }
+    public string Title { get; set; }
+    public List<HomeLevelData> Levels { get; set; } = new List<HomeLevelData>();
+
+    public int MaxLevel => Levels.Count - 1;
+}
+
+/// <summary>One level of a home object: the steps that finish it and the quests its level-up needs.</summary>
+public class HomeLevelData
+{
+    public string Title { get; set; }
+    public string Description { get; set; }
+    public int RequiredProgressSteps { get; set; }
+
+    /// <summary>Laundered rubles per step.</summary>
+    public int ProgressCost { get; set; }
+
+    public List<int> PrerequisiteQuests { get; set; } = new List<int>();
 }
 
 /// <summary>One fishing gear upgrade track: value grows linearly, price grows exponentially.</summary>

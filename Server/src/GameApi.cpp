@@ -148,4 +148,14 @@ void AddGameRoutes(httplib::Server& server, App& app)
     {
         rules.AddStudent(state, body.at("classId").get<std::string>());
     }));
+
+    server.Post("/home/upgrade", profileAction([](GameState& state, const json& body, const GameRules& rules, Clock::time_point)
+    {
+        rules.UpgradeHome(state, body.at("objectId").get<std::string>(), body.value("useGems", false));
+    }));
+
+    server.Post("/home/levelup", profileAction([](GameState& state, const json& body, const GameRules& rules, Clock::time_point)
+    {
+        rules.LevelUpHome(state, body.at("objectId").get<std::string>());
+    }));
 }

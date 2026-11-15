@@ -82,6 +82,21 @@ struct SchoolConfig
     std::vector<SchoolClassData> classes;
 };
 
+/// One level of a home object: the steps that finish it, their price in lr, and the quests the
+/// level-up needs. The last level is the top one: nothing to buy there.
+struct HomeLevelData
+{
+    int requiredProgressSteps = 1;
+    int progressCost = 0;
+    std::vector<int> prerequisiteQuests;
+};
+
+struct HomeObjectData
+{
+    std::string id;
+    std::vector<HomeLevelData> levels;
+};
+
 struct GameConfig
 {
     std::vector<FishType> fish;
@@ -91,6 +106,9 @@ struct GameConfig
     DailyRewardTrack dailyRewards;
     EnergyConfig energy;
     SchoolConfig school;
+    std::vector<HomeObjectData> home;
+    // What one gem pays for when an upgrade is short of laundered rubles.
+    int lrPerGem = 50;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(FishType, id, value, minDepth, isCollectible, kind)
@@ -101,7 +119,10 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(EnergyConfig, max, regenMinutes,
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SchoolClassData, id, tutorCost, studentCost, studentCostGrowth, maxStudents,
     launderBase, launderPerStudent, repPerStudent)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SchoolConfig, offlineCapMinutes, classes)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameConfig, fish, quests, startingQuests, gear, dailyRewards, energy, school)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(HomeLevelData, requiredProgressSteps, progressCost, prerequisiteQuests)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(HomeObjectData, id, levels)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameConfig, fish, quests, startingQuests, gear, dailyRewards, energy, school,
+    home, lrPerGem)
 
 // ---------- Profile: the server owns it, so every field is here ----------
 
@@ -163,6 +184,12 @@ struct SchoolState
     std::string lastTransactionAt;
 };
 
+struct HomeObjectState
+{
+    int level = 0;
+    int steps = 0;
+};
+
 struct GameState
 {
     PlayerState player;
@@ -171,6 +198,8 @@ struct GameState
     DailyRewardState daily;
     EnergyState energy;
     SchoolState school;
+    // Object id → state; untouched objects aren't here.
+    std::map<std::string, HomeObjectState> home;
     std::optional<ActiveRunState> activeRun;
     std::string savedAt;
 };
@@ -183,6 +212,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DailyRewardState, nextDay, lastC
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(EnergyState, amount, updatedAt)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SchoolClassState, hasTutor, students)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SchoolState, classes, lastTransactionAt)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(HomeObjectState, level, steps)
 
 // Written by hand for the optional activeRun, which is null between runs.
 inline void to_json(nlohmann::json& json, const GameState& state)
@@ -194,6 +224,7 @@ inline void to_json(nlohmann::json& json, const GameState& state)
         {"daily", state.daily},
         {"energy", state.energy},
         {"school", state.school},
+        {"home", state.home},
         {"activeRun", state.activeRun ? nlohmann::json(*state.activeRun) : nlohmann::json(nullptr)},
         {"savedAt", state.savedAt},
     };
@@ -207,6 +238,7 @@ inline void from_json(const nlohmann::json& json, GameState& state)
     state.daily = json.value("daily", DailyRewardState{});
     state.energy = json.value("energy", EnergyState{});
     state.school = json.value("school", SchoolState{});
+    state.home = json.value("home", std::map<std::string, HomeObjectState>{});
     state.savedAt = json.value("savedAt", "");
 
     const auto run = json.find("activeRun");

@@ -30,12 +30,16 @@ public:
     void RefillEnergy(GameState& state, Clock::time_point now) const;
     void HireTutor(GameState& state, const std::string& classId) const;
     void AddStudent(GameState& state, const std::string& classId) const;
+    void UpgradeHome(GameState& state, const std::string& objectId, bool useGems) const;
+    void LevelUpHome(GameState& state, const std::string& objectId) const;
 
 private:
     void Validate() const;
     bool SettleEnergy(GameState& state, Clock::time_point now) const;
     bool SettleSchool(GameState& state, Clock::time_point now) const;
     const SchoolClassData& GetClass(const std::string& id) const;
+    const HomeObjectData& GetHomeObject(const std::string& id) const;
+    bool QuestsDone(const GameState& state, const HomeLevelData& level) const;
     bool IsResource(const std::string& id) const;
     const FishType* FindFish(const std::string& id) const;
     const QuestData* FindQuest(int id) const;

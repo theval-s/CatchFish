@@ -39,4 +39,9 @@ public interface IApiClient
     Task<GameState> HireTutorAsync(string classId);
 
     Task<GameState> AddStudentAsync(string classId);
+
+    /// <summary>With <paramref name="useGems"/>, gems pay what the laundered rubles don't cover.</summary>
+    Task<GameState> UpgradeHomeAsync(string objectId, bool useGems);
+
+    Task<GameState> LevelUpHomeAsync(string objectId);
 }

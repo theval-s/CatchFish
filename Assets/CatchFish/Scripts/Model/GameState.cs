@@ -14,6 +14,9 @@ public class GameState
     public EnergyState Energy { get; set; } = new EnergyState();
     public SchoolState School { get; set; } = new SchoolState();
 
+    /// <summary>Home object id → its level; untouched objects aren't here.</summary>
+    public Dictionary<string, HomeObjectState> Home { get; set; } = new Dictionary<string, HomeObjectState>();
+
     /// <summary>The fishing run the backend expects results for, or null.</summary>
     public ActiveRunState ActiveRun { get; set; }
 
@@ -137,4 +140,11 @@ public class SchoolClassState
 {
     public bool HasTutor { get; set; }
     public int Students { get; set; }
+}
+
+/// <summary>A home object's level and the steps done towards the next one.</summary>
+public class HomeObjectState
+{
+    public int Level { get; set; }
+    public int Steps { get; set; }
 }

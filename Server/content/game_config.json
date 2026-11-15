@@ -36,6 +36,13 @@
       "title": "Clean money",
       "description": "Lyonya wants his cut in clean money. Hire a tutor at the school and let it launder your catch.",
       "requirements": { "lr": 1000 },
+      "unlocksId": [ 4 ]
+    },
+    {
+      "id": 4,
+      "title": "Respected man",
+      "description": "The neighbours should know who lives here. Earn some reputation at the school.",
+      "requirements": { "rep": 300 },
       "unlocksId": []
     }
   ],
@@ -70,6 +77,45 @@
         "maxStudents": 6, "launderBase": 25, "launderPerStudent": 8, "repPerStudent": 5 }
     ]
   },
+  "home": [
+    {
+      "id": "wife", "title": "Wife",
+      "levels": [
+        {"title": "Tired", "description": "Works two shifts and hasn't had a new dress in years.", "requiredProgressSteps": 3, "progressCost": 100, "prerequisiteQuests": []},
+        {"title": "Hopeful", "description": "A new coat and a weekend at the dacha. She's starting to smile again.", "requiredProgressSteps": 4, "progressCost": 300, "prerequisiteQuests": [2]},
+        {"title": "Happy", "description": "Salon on Fridays, and she stopped asking where the money comes from.", "requiredProgressSteps": 5, "progressCost": 900, "prerequisiteQuests": []},
+        {"title": "Glamorous", "description": "Fur coat, sunglasses and a Sochi tan."}
+      ]
+    },
+    {
+      "id": "son", "title": "Son",
+      "levels": [
+        {"title": "Gamer", "description": "Lives in his room and plays shooters all night.", "requiredProgressSteps": 3, "progressCost": 120, "prerequisiteQuests": []},
+        {"title": "Student", "description": "Enrolled at the school. Somehow.", "requiredProgressSteps": 4, "progressCost": 350, "prerequisiteQuests": [3]},
+        {"title": "Blogger", "description": "Streams himself fishing, using his dad's footage.", "requiredProgressSteps": 5, "progressCost": 1000, "prerequisiteQuests": []},
+        {"title": "Influencer", "description": "A million followers and a sponsorship deal."}
+      ]
+    },
+    {
+      "id": "pug", "title": "Pug",
+      "levels": [
+        {"title": "Grumpy", "description": "Snores, sheds and judges you.", "requiredProgressSteps": 2, "progressCost": 80, "prerequisiteQuests": []},
+        {"title": "Groomed", "description": "Bathed, brushed and wearing a tiny collar.", "requiredProgressSteps": 3, "progressCost": 250, "prerequisiteQuests": []},
+        {"title": "Dapper", "description": "Has a bow tie and his own fan page.", "requiredProgressSteps": 4, "progressCost": 700, "prerequisiteQuests": [2]},
+        {"title": "Champion", "description": "Best in show, three years running."}
+      ]
+    },
+    {
+      "id": "apartment", "title": "Apartment",
+      "levels": [
+        {"title": "Khrushchyovka", "description": "Peeling wallpaper and a leaking tap.", "requiredProgressSteps": 3, "progressCost": 200, "prerequisiteQuests": []},
+        {"title": "Renovated", "description": "New wallpaper, a working tap and a huge TV.", "requiredProgressSteps": 4, "progressCost": 600, "prerequisiteQuests": [3]},
+        {"title": "Penthouse", "description": "Top floor, with a view of the whole river.", "requiredProgressSteps": 5, "progressCost": 2000, "prerequisiteQuests": [4]},
+        {"title": "Mansion", "description": "A house by the lake with its own pier."}
+      ]
+    }
+  ],
+  "lrPerGem": 50,
   "introDialog": [
     { "speaker": "", "text": "Petrovich has a boat, a rod and a family to feed. Fishing licenses are for other people." },
     { "speaker": "Petrovich", "text": "The fish inspectors call it poaching. I call it a family business." },

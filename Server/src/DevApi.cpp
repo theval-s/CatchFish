@@ -111,7 +111,7 @@ void AddDevRoutes(httplib::Server& server, App& app)
         SendJson(response, app.content.Json());
     }));
 
-    // Refused while startingQuests or another quest's unlocksId still points at it.
+    // Refused while startingQuests, another quest's unlocksId or a home level still points at it.
     server.Delete(R"(/dev/config/quests/(\d+))", dev([&app](const httplib::Request& request, httplib::Response& response)
     {
         const auto id = PathId(request);

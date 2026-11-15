@@ -388,6 +388,70 @@ void GameRules::CompleteQuest(GameState& state, int questId) const
     }
 }
 
+void GameRules::UpgradeHome(GameState& state, const std::string& objectId, bool useGems) const
+{
+    const auto& data = GetHomeObject(objectId);
+    auto& object = state.home[objectId];
+    if (object.level >= static_cast<int>(data.levels.size()) - 1)
+    {
+        throw ApiError(409, "home_maxed", objectId);
+    }
+
+    const auto& level = data.levels[object.level];
+    if (object.steps >= level.requiredProgressSteps)
+    {
+        throw ApiError(409, "steps_full", objectId);
+    }
+
+    // Short of laundered rubles, gems can pay the rest.
+    auto& player = state.player;
+    const auto missing = level.progressCost - player.launderedRubles;
+    if (useGems && missing > 0)
+    {
+        Spend(player, {{"lr", player.launderedRubles}, {"gems", (missing + _config.lrPerGem - 1) / _config.lrPerGem}});
+    }
+    else
+    {
+        Spend(player, {{"lr", level.progressCost}});
+    }
+
+    object.steps++;
+    if (object.steps >= level.requiredProgressSteps && QuestsDone(state, level))
+    {
+        object.level++;
+        object.steps = 0;
+    }
+}
+
+void GameRules::LevelUpHome(GameState& state, const std::string& objectId) const
+{
+    const auto& data = GetHomeObject(objectId);
+    auto& object = state.home[objectId];
+    if (object.level >= static_cast<int>(data.levels.size()) - 1)
+    {
+        throw ApiError(409, "home_maxed", objectId);
+    }
+
+    const auto& level = data.levels[object.level];
+    if (object.steps < level.requiredProgressSteps)
+    {
+        throw ApiError(409, "steps_not_full", objectId);
+    }
+    if (!QuestsDone(state, level))
+    {
+        throw ApiError(409, "quests_not_done", objectId);
+    }
+
+    object.level++;
+    object.steps = 0;
+}
+
+bool GameRules::QuestsDone(const GameState& state, const HomeLevelData& level) const
+{
+    return std::all_of(level.prerequisiteQuests.begin(), level.prerequisiteQuests.end(),
+        [&state](int id) { return Contains(state.quests.completed, id); });
+}
+
 void GameRules::StartRun(GameState& state, Clock::time_point now) const
 {
     // TODO: refuse while the wanted level is too high, once it exists
@@ -628,6 +692,40 @@ void GameRules::Validate() const
             InvalidConfig(name + " needs studentCostGrowth > 0 and no negative counts or rates");
         }
     }
+
+    if (_config.lrPerGem <= 0)
+    {
+        InvalidConfig("lrPerGem must be above 0");
+    }
+    std::set<std::string> homeIds;
+    for (const auto& object : _config.home)
+    {
+        const auto name = "home object '" + object.id + "'";
+        if (object.id.empty() || !homeIds.insert(object.id).second)
+        {
+            InvalidConfig(name + " needs a unique id");
+        }
+        if (object.levels.empty())
+        {
+            InvalidConfig(name + " needs at least one level");
+        }
+        for (std::size_t i = 0; i + 1 < object.levels.size(); i++)
+        {
+            const auto& level = object.levels[i];
+            const auto levelName = name + " level " + std::to_string(i);
+            if (level.requiredProgressSteps <= 0 || level.progressCost < 0)
+            {
+                InvalidConfig(levelName + " needs requiredProgressSteps > 0 and progressCost >= 0");
+            }
+            for (const auto id : level.prerequisiteQuests)
+            {
+                if (FindQuest(id) == nullptr)
+                {
+                    InvalidConfig(levelName + " needs quest " + std::to_string(id) + ", which doesn't exist");
+                }
+            }
+        }
+    }
 }
 
 bool GameRules::IsResource(const std::string& id) const
@@ -685,6 +783,19 @@ const SchoolClassData& GameRules::GetClass(const std::string& id) const
     }
 
     throw ApiError(400, "unknown_class", id);
+}
+
+const HomeObjectData& GameRules::GetHomeObject(const std::string& id) const
+{
+    for (const auto& object : _config.home)
+    {
+        if (object.id == id)
+        {
+            return object;
+        }
+    }
+
+    throw ApiError(400, "unknown_home_object", id);
 }
 
 float GameRules::GearValue(const GameState& state, const std::string& gearId) const

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b05eb8c3128e4aa1af96f341bdf2afd, type: 3}
+  m_Name: HomeSkinCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::HomeSkinCatalog
+  placeholder: {fileID: 21300000, guid: bca352d85677c412f98a904029e7d21d, type: 3}
+  skins:
+  - objectId: wife
+    levelSprites: []
+    color: {r: 0.95, g: 0.6, b: 0.75, a: 1}
+  - objectId: son
+    levelSprites: []
+    color: {r: 0.45, g: 0.65, b: 0.95, a: 1}
+  - objectId: pug
+    levelSprites: []
+    color: {r: 0.85, g: 0.7, b: 0.45, a: 1}
+  - objectId: apartment
+    levelSprites: []
+    color: {r: 0.7, g: 0.72, b: 0.75, a: 1}

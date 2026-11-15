@@ -200,6 +200,8 @@ Everything except `/config`, `/time` and `/auth/guest…` needs `Authorization: 
 | `POST` | `/energy/refill` | | `GameState` with full energy |
 | `POST` | `/school/hire` | `{ "classId": string }` | `GameState` |
 | `POST` | `/school/student` | `{ "classId": string }` | `GameState` |
+| `POST` | `/home/upgrade` | `{ "objectId": string, "useGems": bool }` | `GameState` |
+| `POST` | `/home/levelup` | `{ "objectId": string }` | `GameState` |
 
 Dev API, every request with the header `X-Dev-Key: <key>`:
 
@@ -219,7 +221,7 @@ The config changes answer with the new config. Errors come back as `{ "error": c
 | Status | `error` | When |
 |-|-|-|
 | 400 | `bad_request` | Malformed JSON or a missing field |
-| 400 | `unknown_gear`, `unknown_quest`, `unknown_fish`, `unknown_class` | The id isn't in the config |
+| 400 | `unknown_gear`, `unknown_quest`, `unknown_fish`, `unknown_class`, `unknown_home_object` | The id isn't in the config |
 | 400 | `invalid_run` | The run's results aren't possible with its gear (see Rules) |
 | 400 | `invalid_config` | A dev change would break the config; `message` says how |
 | 401 | `unauthorized` | No session token, or an unknown one |
@@ -237,6 +239,10 @@ The config changes answer with the new config. Errors come back as `{ "error": c
 | 409 | `tutor_hired` | The class already has its tutor |
 | 409 | `no_tutor` | Students need the class's tutor first |
 | 409 | `class_full` | The class has `maxStudents` already |
+| 409 | `home_maxed` | The home object is at its top level |
+| 409 | `steps_full` | This level's steps are done; it needs a level-up |
+| 409 | `steps_not_full` | Level-up before the level's steps are done |
+| 409 | `quests_not_done` | Level-up before the level's `prerequisiteQuests` are completed |
 
 ## Rules
 
@@ -257,6 +263,11 @@ The config changes answer with the new config. Errors come back as `{ "error": c
   the tutor. Every whole minute since `school.lastTransactionAt`, each class with a tutor launders
   `launderBase + launderPerStudent * students` `dr` into `lr` and earns `repPerStudent * students` `rep`.
   Only the `dr` the player has can be laundered. At most `offlineCapMinutes` count between two requests.
+- **Home objects** (`home` in the config: objects with `levels`, plus `lrPerGem`). An object starts at level 0;
+  its last level is the top one. Upgrade: spends the level's `progressCost` in `lr` and adds a step, up to
+  `requiredProgressSteps`. With `useGems`, when `lr` is short, all the `lr` is spent and the rest costs
+  `ceil(missing / lrPerGem)` gems. When the steps are done and the level's `prerequisiteQuests` are completed,
+  the object goes up a level (steps back to 0) right away; otherwise level-up waits for the quests.
 - **Start run**: spends `runCost` energy, then records `activeRun`: an id, the start time, and the line length and hook capacity
   at the current gear levels. A new start replaces a run that was never completed.
 - **Complete run**: the client reports which fish were shot, not how much they were worth. The server
