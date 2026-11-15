@@ -195,7 +195,7 @@ Everything except `/config`, `/time` and `/auth/guest…` needs `Authorization: 
 | `POST` | `/gear/buy` | `{ "gearId": string }` | `GameState` |
 | `POST` | `/quests/complete` | `{ "questId": int }` | `GameState` |
 | `POST` | `/runs/start` | | `GameState` with `activeRun` set |
-| `POST` | `/runs/complete` | `{ "runId": string, "shotFish": { fishId: count } }` | `GameState` with `activeRun` null |
+| `POST` | `/runs/complete` | `{ "runId": string, "shotFish": { fishId: count }, "shockedFish": { fishId: count }, "bittenBy": fishId \| null }` | `GameState` with `activeRun` null |
 | `POST` | `/daily/claim` | | `GameState` |
 | `POST` | `/energy/refill` | | `GameState` with full energy |
 
@@ -250,10 +250,18 @@ The config changes answer with the new config. Errors come back as `{ "error": c
   at the current gear levels. A new start replaces a run that was never completed.
 - **Complete run**: the client reports which fish were shot, not how much they were worth. The server
   checks the run, then adds the fish values to `dr` (never below 0), collectible fish to `fishCollection`,
-  and counts the run in `runsCompleted`. The checks, since the minigame itself runs on the client:
+  and counts the run in `runsCompleted`. Fish with a `kind`:
+  - `eel`: the fish already on the hook when it was hooked are reported in `shockedFish` and pay `value / 2`
+    (integer division);
+  - `shark`: takes the hook with the whole catch. The run reports it in `bittenBy` with no `shotFish`, and the
+    shark's (negative) `value` is the fine;
+  - `bomb`: blows up the fish around it when shot; those just aren't reported.
+
+  The checks, since the minigame itself runs on the client:
   - `runId` is the active run;
   - every fish exists, and no deeper than the line could reach (5 m margin);
-  - no more fish than the hook's capacity;
+  - no more fish than the hook's capacity, no shark among them, no more shocked fish than shot;
+  - `bittenBy` is a shark the line could reach, and then nothing was shot;
   - the run lasted at least 2 seconds.
 - **Daily reward**: one claim per calendar day, where the day starts at midnight `utcOffsetHours` from UTC
   (+3 = Moscow). The claim gives `days[daily.nextDay]` and moves `nextDay` on; after the last day it goes back

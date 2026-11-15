@@ -16,7 +16,7 @@ Where art goes in and how to set it. Everything here is set in the Inspector, wi
 
 | What | Where | Notes |
 |-|-|-|
-| Fish | `Settings/FishSkinCatalog.asset`: one entry per fish id (`f1`, `f2`, …) | Draw them facing right; the game mirrors fish swimming left. Set Pixels Per Unit to the image's height in pixels: the fish config's `size` then sets how tall it is. A new fish id without an entry shows up magenta |
+| Fish | `Settings/FishSkinCatalog.asset`: one entry per fish id (`f1`, `f2`, …) | Draw them facing right; the game mirrors fish swimming left. Set Pixels Per Unit to the image's height in pixels: the fish config's `size` then sets how tall it is. A new fish id without an entry shows up magenta. `f13` bomb fish, `f14` electric eel and `f15` shark are placeholder squares for now (dark, yellow, grey) |
 | Boat, fisherman, sky and shore | `Prefabs/Fishing/Surface.prefab` | Placed at the water surface (y = 0). Replace the placeholder squares' sprites, or add more sprites |
 | Hook | `Prefabs/Fishing/HookVisual.prefab` | Centered on the hook |
 | Water | `Scenery` in the Fishing scene → **Water Sprite** | Tiled over the whole depth and darkened from **Shallow Water** to **Deep Water** (set both to white to show it as drawn). Import with Mesh Type: Full Rect, Wrap Mode: Repeat |

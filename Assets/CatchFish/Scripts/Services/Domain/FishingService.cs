@@ -63,6 +63,8 @@ public class FishingService
         {
             RunId = _profile.State.ActiveRun?.Id,
             ShotFish = Session.ShotFish,
+            ShockedFish = Session.ShockedFish,
+            BittenBy = Session.BittenBy,
         };
         var saved = await _profile.TryApplyAsync(_api.CompleteRunAsync(result));
         RunCompleted?.Invoke(saved);

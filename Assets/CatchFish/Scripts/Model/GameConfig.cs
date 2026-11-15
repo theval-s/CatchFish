@@ -39,6 +39,11 @@ public class FishType
     /// <summary>Shot collectible fish go to the fish collection (used by quests).</summary>
     public bool IsCollectible { get; set; }
 
+    /// <summary>"" for a normal fish, or one of <see cref="FishKinds"/>.</summary>
+    public string Kind { get; set; } = "";
+
+    public bool IsKind(string kind) => Kind == kind;
+
     public bool LivesAt(float depth) => depth >= MinDepth && depth <= MaxDepth;
 }
 
@@ -102,4 +107,17 @@ public static class GearIds
     public const string LineDurability = "lineDurability";
     public const string HookCapacity = "hookCapacity";
     public const string ReelSpeed = "reelSpeed";
+}
+
+/// <summary>Special fish (<see cref="FishType.Kind"/>).</summary>
+public static class FishKinds
+{
+    /// <summary>Shooting it blows up the fish around it.</summary>
+    public const string Bomb = "bomb";
+
+    /// <summary>Hooking it shocks the fish already on the hook: they pay half.</summary>
+    public const string Eel = "eel";
+
+    /// <summary>Takes the hook with the whole catch; its negative value is the fine.</summary>
+    public const string Shark = "shark";
 }

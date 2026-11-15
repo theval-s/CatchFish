@@ -11,7 +11,10 @@
     { "id": "f9",  "name": "Puffer",           "value": 18,  "minDepth": 50,  "maxDepth": 280, "swimSpeed": 0.55, "size": 0.7,  "spawnWeight": 3,   "isCollectible": false },
     { "id": "f10", "name": "Snapper",          "value": 35,  "minDepth": 100, "maxDepth": 400, "swimSpeed": 0.9,  "size": 0.8,  "spawnWeight": 2.5, "isCollectible": false },
     { "id": "f11", "name": "Armored Grouper",  "value": 85,  "minDepth": 180, "maxDepth": 400, "swimSpeed": 0.45, "size": 1.1,  "spawnWeight": 1.6, "isCollectible": false },
-    { "id": "f12", "name": "Angler",           "value": 55,  "minDepth": 200, "maxDepth": 400, "swimSpeed": 0.55, "size": 0.95, "spawnWeight": 1.5, "isCollectible": false }
+    { "id": "f12", "name": "Angler",           "value": 55,  "minDepth": 200, "maxDepth": 400, "swimSpeed": 0.55, "size": 0.95, "spawnWeight": 1.5, "isCollectible": false },
+    { "id": "f13", "name": "Bomb Fish",        "value": 0,   "minDepth": 40,  "maxDepth": 400, "swimSpeed": 0.5,  "size": 0.8,  "spawnWeight": 1.5, "isCollectible": false, "kind": "bomb" },
+    { "id": "f14", "name": "Electric Eel",     "value": 25,  "minDepth": 70,  "maxDepth": 400, "swimSpeed": 1.0,  "size": 0.7,  "spawnWeight": 1.5, "isCollectible": false, "kind": "eel" },
+    { "id": "f15", "name": "Shark",            "value": -10000, "minDepth": 120, "maxDepth": 400, "swimSpeed": 1.3, "size": 1.6, "spawnWeight": 0.6, "isCollectible": false, "kind": "shark" }
   ],
   "quests": [
     {

@@ -48,6 +48,9 @@ public class FishingController : MonoBehaviour
     /// <summary>Raised when a fish is shot: world position and money earned (for HUD popups).</summary>
     public event Action<Vector2, int> FishShot;
 
+    /// <summary>Raised when a shot bomb fish blows up: world position and blast radius.</summary>
+    public event Action<Vector2, float> BombExploded;
+
     public FishingSessionState Session { get; private set; }
     public Hook Hook => hook;
 
@@ -76,7 +79,7 @@ public class FishingController : MonoBehaviour
         _lineSpeed = Session.ReelSpeed * (Session.IsFirstRun ? firstRunLineSpeedMultiplier : 1f);
         _fishGravity = gravity * (Session.IsFirstRun ? firstRunGravityMultiplier : 1f);
         hook.ResetForRun(Session.Durability, Session.Capacity);
-        spawner.SpawnOcean(Session.MaxDepth);
+        spawner.SpawnOcean(Session.MaxDepth, !Session.IsFirstRun);
     }
 
     private void Update()
@@ -120,11 +123,17 @@ public class FishingController : MonoBehaviour
                 continue;
             }
 
+            if (fish.Type.IsKind(FishKinds.Shark))
+            {
+                SharkBite(fish);
+                return;
+            }
+
             fish.HasHitHook = true;
             if (!hook.AbsorbHit())
             {
                 // Out of durability: this fish gets hooked and we start reeling in.
-                hook.TryCatch(fish);
+                Catch(fish);
                 BeginAscent();
                 return;
             }
@@ -137,6 +146,35 @@ public class FishingController : MonoBehaviour
             hook.SetDepth(Session.MaxDepth);
             BeginAscent();
         }
+    }
+
+    /// <summary>An eel shocks the fish already on the hook.</summary>
+    private void Catch(Fish fish)
+    {
+        if (hook.IsFull)
+        {
+            return;
+        }
+
+        if (fish.Type.IsKind(FishKinds.Eel))
+        {
+            foreach (var caught in hook.Caught)
+            {
+                caught.Shock();
+            }
+        }
+
+        hook.TryCatch(fish);
+    }
+
+    /// <summary>The shark takes the hook with the whole catch, and the run ends with a fine.</summary>
+    private void SharkBite(Fish shark)
+    {
+        Session.BittenBy = shark.Type.Id;
+        Session.DepthReached = Mathf.Max(Session.DepthReached, hook.Depth);
+        Session.Caught = hook.Caught.Count;
+        Session.Lost += hook.Caught.Count;
+        FinishRun();
     }
 
     private void BeginAscent()
@@ -155,14 +193,26 @@ public class FishingController : MonoBehaviour
 
         foreach (var fish in spawner.AllFish)
         {
-            if (hook.IsFull)
+            if (fish.State != FishState.Swimming)
             {
-                break;
+                continue;
             }
 
-            if (fish.State == FishState.Swimming && hook.CanCatch(fish))
+            // A shark bites a full hook too.
+            if (fish.Type.IsKind(FishKinds.Shark))
             {
-                hook.TryCatch(fish);
+                if (hook.IsHitBy(fish))
+                {
+                    SharkBite(fish);
+                    return;
+                }
+
+                continue;
+            }
+
+            if (!hook.IsFull && hook.CanCatch(fish))
+            {
+                Catch(fish);
             }
         }
 
@@ -241,15 +291,48 @@ public class FishingController : MonoBehaviour
         }
 
         var type = target.Type;
+        var value = target.IsShocked ? type.Value / 2 : type.Value;
         Session.Shot++;
-        Session.Earnings += type.Value;
-        Session.ShotFish.TryGetValue(type.Id, out var count);
-        Session.ShotFish[type.Id] = count + 1;
+        Session.Earnings += value;
+        Add(Session.ShotFish, type.Id);
+        if (target.IsShocked)
+        {
+            Add(Session.ShockedFish, type.Id);
+        }
 
-        FishShot?.Invoke(target.Position, type.Value);
+        FishShot?.Invoke(target.Position, value);
 
         _airborne.Remove(target);
         spawner.Remove(target);
+
+        if (type.IsKind(FishKinds.Bomb))
+        {
+            Explode(target.Position);
+        }
+    }
+
+    /// <summary>Blows up the airborne fish within half the screen width; they pay nothing.</summary>
+    private void Explode(Vector2 center)
+    {
+        var radius = _camera.orthographicSize * _camera.aspect;
+        for (var i = _airborne.Count - 1; i >= 0; i--)
+        {
+            var fish = _airborne[i];
+            if (Vector2.Distance(fish.Position, center) <= radius + fish.Radius)
+            {
+                Session.Destroyed++;
+                _airborne.RemoveAt(i);
+                spawner.Remove(fish);
+            }
+        }
+
+        BombExploded?.Invoke(center, radius);
+    }
+
+    private static void Add(Dictionary<string, int> counts, string id)
+    {
+        counts.TryGetValue(id, out var count);
+        counts[id] = count + 1;
     }
 
     private void FinishRun()

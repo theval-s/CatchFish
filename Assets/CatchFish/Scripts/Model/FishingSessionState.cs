@@ -29,6 +29,15 @@ public class FishingSessionState
     public int Lost { get; set; }
     public int Earnings { get; set; }
 
+    /// <summary>Airborne fish blown up by a bomb fish.</summary>
+    public int Destroyed { get; set; }
+
+    /// <summary>The shark that took the hook, or null.</summary>
+    public string BittenBy { get; set; }
+
     /// <summary>Fish shot during the run: fish id → count. Sent to the backend, which pays for them.</summary>
     public Dictionary<string, int> ShotFish { get; } = new Dictionary<string, int>();
+
+    /// <summary>Shot fish that an eel had shocked: fish id → count.</summary>
+    public Dictionary<string, int> ShockedFish { get; } = new Dictionary<string, int>();
 }

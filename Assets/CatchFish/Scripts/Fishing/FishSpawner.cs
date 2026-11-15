@@ -26,6 +26,7 @@ public class FishSpawner : MonoBehaviour
     private readonly List<Fish> _fish = new List<Fish>();
     private readonly List<FishType> _candidates = new List<FishType>();
     private ConfigService _config;
+    private bool _withSharks = true;
 
     public float HalfWidth => halfWidth;
     public IReadOnlyList<Fish> AllFish => _fish;
@@ -36,9 +37,11 @@ public class FishSpawner : MonoBehaviour
         _config = config;
     }
 
-    public void SpawnOcean(float maxDepth)
+    /// <summary>Fills the water down to the line's reach. The first run gets no sharks.</summary>
+    public void SpawnOcean(float maxDepth, bool withSharks = true)
     {
         Clear();
+        _withSharks = withSharks;
 
         // Spawn a bit below max depth too, so the bottom of the line doesn't look empty.
         var lastDepth = maxDepth + bandHeight * 2f;
@@ -180,7 +183,7 @@ public class FishSpawner : MonoBehaviour
         _candidates.Clear();
         foreach (var data in _config.Config.Fish)
         {
-            if (data.LivesAt(depth) && data.SpawnWeight > 0f)
+            if (data.LivesAt(depth) && data.SpawnWeight > 0f && (_withSharks || !data.IsKind(FishKinds.Shark)))
             {
                 _candidates.Add(data);
             }

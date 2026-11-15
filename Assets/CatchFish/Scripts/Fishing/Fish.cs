@@ -71,6 +71,9 @@ public class Fish : MonoBehaviour
     /// <summary>Set after the fish bumps the sinking hook, so one fish can't hit it twice.</summary>
     public bool HasHitHook { get; set; }
 
+    /// <summary>Shocked by an eel hooked after it: pays half.</summary>
+    public bool IsShocked { get; private set; }
+
     /// <summary>True once an airborne fish falls back into the water.</summary>
     public bool HasFallenIntoWater => State == FishState.Airborne && _velocity.y < 0f && transform.position.y < 0f;
 
@@ -197,6 +200,18 @@ public class Fish : MonoBehaviour
         position.y = Mathf.Clamp(_originY + _swimming.WaveOffset, _minY, _maxY);
         transform.position = position;
         ShowSwimPose();
+    }
+
+    public void Shock()
+    {
+        if (IsShocked)
+        {
+            return;
+        }
+
+        IsShocked = true;
+        _baseColor = Color.Lerp(_baseColor, new Color(0.35f, 0.75f, 1f), 0.6f);
+        _renderer.color = _baseColor;
     }
 
     /// <summary>Returns true only on the lethal airborne hit; callers award the fish once.</summary>

@@ -272,7 +272,7 @@
             "url": "{{baseUrl}}/runs/complete",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"runId\": \"paste activeRun.id from Start run\",\n  \"shotFish\": { \"f1\": 2 }\n}",
+              "raw": "{\n  \"runId\": \"paste activeRun.id from Start run\",\n  \"shotFish\": {\n    \"f1\": 2\n  },\n  \"shockedFish\": {},\n  \"bittenBy\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"

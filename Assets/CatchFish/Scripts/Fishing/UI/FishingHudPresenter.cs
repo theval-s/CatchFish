@@ -14,9 +14,17 @@ public class FishingHudPresenter : IStartable, ITickable, IDisposable
         _controller = controller;
     }
 
-    public void Start() => _controller.FishShot += OnFishShot;
+    public void Start()
+    {
+        _controller.FishShot += OnFishShot;
+        _controller.BombExploded += OnBombExploded;
+    }
 
-    public void Dispose() => _controller.FishShot -= OnFishShot;
+    public void Dispose()
+    {
+        _controller.FishShot -= OnFishShot;
+        _controller.BombExploded -= OnBombExploded;
+    }
 
     public void Tick()
     {
@@ -40,6 +48,8 @@ public class FishingHudPresenter : IStartable, ITickable, IDisposable
 
     private void OnFishShot(Vector2 worldPosition, int value) =>
         _view.ShowPopup(worldPosition, value >= 0 ? $"+{value}" : $"-{-value}");
+
+    private void OnBombExploded(Vector2 worldPosition, float radius) => _view.ShowPopup(worldPosition, "BOOM!");
 
     private static string PhaseHint(FishingPhase phase)
     {

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <iterator>
 #include <set>
 #include <stdexcept>
 #include <utility>
@@ -16,6 +17,9 @@ namespace
     // Fish spawn a little below the line's reach and the hook has a size, so allow a few meters.
     constexpr float DepthTolerance = 5.0f;
     constexpr double MinRunSeconds = 2.0;
+
+    const char* const FishKinds[] = {"", "bomb", "eel", "shark"};
+    const char* const Shark = "shark";
 
     const char* const LineLength = "lineLength";
     const char* const HookCapacity = "hookCapacity";
@@ -342,6 +346,8 @@ void GameRules::CompleteRun(GameState& state, const RunResult& result, Clock::ti
     }
 
     // The minigame runs on the client, so the results can only be checked for being possible.
+    const auto reachable = [&run](const FishType& fish) { return fish.minDepth <= run.maxDepth + DepthTolerance; };
+
     std::vector<std::pair<const FishType*, int>> shot;
     auto total = 0;
     for (const auto& [fishId, count] : result.shotFish)
@@ -352,7 +358,7 @@ void GameRules::CompleteRun(GameState& state, const RunResult& result, Clock::ti
             throw ApiError(400, "unknown_fish", fishId);
         }
 
-        if (count < 0 || fish->minDepth > run.maxDepth + DepthTolerance)
+        if (count < 0 || !reachable(*fish) || fish->kind == Shark)
         {
             throw ApiError(400, "invalid_run", fishId + " can't be caught with this line");
         }
@@ -366,11 +372,37 @@ void GameRules::CompleteRun(GameState& state, const RunResult& result, Clock::ti
         throw ApiError(400, "invalid_run", "more fish than the hook holds");
     }
 
+    for (const auto& [fishId, count] : result.shockedFish)
+    {
+        const auto found = result.shotFish.find(fishId);
+        if (count < 0 || count > (found != result.shotFish.end() ? found->second : 0))
+        {
+            throw ApiError(400, "invalid_run", "more shocked " + fishId + " than shot");
+        }
+    }
+
     auto& player = state.player;
     auto earnings = 0;
+    if (!result.bittenBy.empty())
+    {
+        const auto* shark = FindFish(result.bittenBy);
+        if (shark == nullptr)
+        {
+            throw ApiError(400, "unknown_fish", result.bittenBy);
+        }
+        if (shark->kind != Shark || !reachable(*shark) || total > 0)
+        {
+            throw ApiError(400, "invalid_run", "a shark takes the hook with the whole catch");
+        }
+
+        earnings = shark->value;
+    }
+
     for (const auto& [fish, count] : shot)
     {
-        earnings += fish->value * count;
+        const auto found = result.shockedFish.find(fish->id);
+        const auto shocked = found != result.shockedFish.end() ? found->second : 0;
+        earnings += fish->value * (count - shocked) + fish->value / 2 * shocked;
         if (fish->isCollectible)
         {
             SetResource(player, fish->id, GetResource(player, fish->id) + count);
@@ -395,6 +427,10 @@ void GameRules::Validate() const
         if (!fishIds.insert(fish.id).second)
         {
             InvalidConfig("fish '" + fish.id + "' appears twice");
+        }
+        if (std::find(std::begin(FishKinds), std::end(FishKinds), fish.kind) == std::end(FishKinds))
+        {
+            InvalidConfig("fish '" + fish.id + "' has kind '" + fish.kind + "'; use \"\", bomb, eel or shark");
         }
     }
 

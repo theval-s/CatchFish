@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using VContainer.Unity;
 
@@ -35,13 +36,28 @@ public class FishingResultsPresenter : IStartable, IDisposable
     private void OnRunCompleted(bool saved)
     {
         var session = _fishing.Session;
-        var collected = DescribeCollected(session);
+        var notes = new StringBuilder();
         if (!saved)
         {
-            collected = "Not saved: the server didn't accept the run.\n" + collected;
+            notes.AppendLine("Not saved: the server didn't accept the run.");
         }
+        if (session.BittenBy != null)
+        {
+            var shark = _config.GetFish(session.BittenBy);
+            notes.AppendLine($"A {shark.Name} took the hook! Fine: {-shark.Value} DR");
+        }
+        if (session.Destroyed > 0)
+        {
+            notes.AppendLine($"Blown up: {session.Destroyed} fish");
+        }
+        var shocked = session.ShockedFish.Values.Sum();
+        if (shocked > 0)
+        {
+            notes.AppendLine($"Shocked by an eel: {shocked} fish at half price");
+        }
+        notes.Append(DescribeCollected(session));
 
-        _view.Show(session.DepthReached, session.Caught, session.Shot, session.Lost, session.Earnings, collected);
+        _view.Show(session.DepthReached, session.Caught, session.Shot, session.Lost, session.Earnings, notes.ToString().TrimEnd());
     }
 
     private void OnBackToHub() => _ = _scenes.LoadAsync(SceneNames.Hub);

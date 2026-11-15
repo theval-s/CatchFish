@@ -17,6 +17,8 @@ struct FishType
     int value = 0;
     float minDepth = 0;
     bool isCollectible = false;
+    // "" for a normal fish, or "bomb", "eel", "shark". A shark's value is the fine for losing the hook.
+    std::string kind;
 };
 
 struct QuestData
@@ -67,7 +69,7 @@ struct GameConfig
     EnergyConfig energy;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(FishType, id, value, minDepth, isCollectible)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(FishType, id, value, minDepth, isCollectible, kind)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(QuestData, id, requirements, unlocksId, autoStart)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GearUpgradeData, id, maxLevel, baseCost, costGrowth, baseValue, valuePerLevel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DailyRewardTrack, utcOffsetHours, days)
@@ -179,6 +181,10 @@ struct RunResult
 {
     std::string runId;
     std::map<std::string, int> shotFish;
+    // Shot fish that were on the hook when an eel was hooked: they pay half.
+    std::map<std::string, int> shockedFish;
+    // The shark that took the hook, or empty.
+    std::string bittenBy;
 };
 
 inline void from_json(const nlohmann::json& json, RunResult& result)
@@ -187,4 +193,7 @@ inline void from_json(const nlohmann::json& json, RunResult& result)
     const auto& runId = json.at("runId");
     result.runId = runId.is_null() ? "" : runId.get<std::string>();
     result.shotFish = json.value("shotFish", std::map<std::string, int>{});
+    result.shockedFish = json.value("shockedFish", std::map<std::string, int>{});
+    const auto bittenBy = json.find("bittenBy");
+    result.bittenBy = bittenBy == json.end() || bittenBy->is_null() ? "" : bittenBy->get<std::string>();
 }
