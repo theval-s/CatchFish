@@ -54,5 +54,6 @@
       { "gems": 5 },
       { "dr": 400, "gems": 10 }
     ]
-  }
+  },
+  "energy": { "max": 5, "regenMinutes": 20, "runCost": 1, "refillGems": 10 }
 }

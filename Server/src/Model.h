@@ -48,6 +48,15 @@ struct DailyRewardTrack
     std::vector<std::map<std::string, int>> days;
 };
 
+/// Each run costs energy; it comes back over time or for gems.
+struct EnergyConfig
+{
+    int max = 5;
+    int regenMinutes = 20;
+    int runCost = 1;
+    int refillGems = 10;
+};
+
 struct GameConfig
 {
     std::vector<FishType> fish;
@@ -55,13 +64,15 @@ struct GameConfig
     std::vector<int> startingQuests;
     std::vector<GearUpgradeData> gear;
     DailyRewardTrack dailyRewards;
+    EnergyConfig energy;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(FishType, id, value, minDepth, isCollectible)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(QuestData, id, requirements, unlocksId, autoStart)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GearUpgradeData, id, maxLevel, baseCost, costGrowth, baseValue, valuePerLevel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DailyRewardTrack, utcOffsetHours, days)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameConfig, fish, quests, startingQuests, gear, dailyRewards)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(EnergyConfig, max, regenMinutes, runCost, refillGems)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameConfig, fish, quests, startingQuests, gear, dailyRewards, energy)
 
 // ---------- Profile: the server owns it, so every field is here ----------
 
@@ -102,12 +113,20 @@ struct DailyRewardState
     int lastClaimDay = -1;
 };
 
+struct EnergyState
+{
+    int amount = 0;
+    // When the next point started to regenerate. Empty = never set: the profile starts full.
+    std::string updatedAt;
+};
+
 struct GameState
 {
     PlayerState player;
     QuestProgressState quests;
     UpgradeProgressState upgrades;
     DailyRewardState daily;
+    EnergyState energy;
     std::optional<ActiveRunState> activeRun;
     std::string savedAt;
 };
@@ -117,6 +136,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(QuestProgressState, active, comp
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(UpgradeProgressState, gearLevels)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ActiveRunState, id, startedAt, maxDepth, capacity)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DailyRewardState, nextDay, lastClaimDay)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(EnergyState, amount, updatedAt)
 
 // Written by hand for the optional activeRun, which is null between runs.
 inline void to_json(nlohmann::json& json, const GameState& state)
@@ -126,6 +146,7 @@ inline void to_json(nlohmann::json& json, const GameState& state)
         {"quests", state.quests},
         {"upgrades", state.upgrades},
         {"daily", state.daily},
+        {"energy", state.energy},
         {"activeRun", state.activeRun ? nlohmann::json(*state.activeRun) : nlohmann::json(nullptr)},
         {"savedAt", state.savedAt},
     };
@@ -137,6 +158,7 @@ inline void from_json(const nlohmann::json& json, GameState& state)
     state.quests = json.value("quests", QuestProgressState{});
     state.upgrades = json.value("upgrades", UpgradeProgressState{});
     state.daily = json.value("daily", DailyRewardState{});
+    state.energy = json.value("energy", EnergyState{});
     state.savedAt = json.value("savedAt", "");
 
     const auto run = json.find("activeRun");

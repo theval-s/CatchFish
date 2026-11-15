@@ -15,6 +15,7 @@ public class GameConfig
     public List<int> StartingQuests { get; set; } = new List<int>();
     public List<GearUpgradeData> Gear { get; set; } = new List<GearUpgradeData>();
     public DailyRewardTrack DailyRewards { get; set; } = new DailyRewardTrack();
+    public EnergyConfig Energy { get; set; } = new EnergyConfig();
 }
 
 /// <summary>One kind of fish.</summary>
@@ -66,6 +67,15 @@ public class DailyRewardTrack
 
     /// <summary>One reward per day: resource id → amount.</summary>
     public List<Dictionary<string, int>> Days { get; set; } = new List<Dictionary<string, int>>();
+}
+
+/// <summary>Each run costs energy; it comes back over time or for gems.</summary>
+public class EnergyConfig
+{
+    public int Max { get; set; } = 5;
+    public int RegenMinutes { get; set; } = 20;
+    public int RunCost { get; set; } = 1;
+    public int RefillGems { get; set; } = 10;
 }
 
 /// <summary>One fishing gear upgrade track: value grows linearly, price grows exponentially.</summary>

@@ -79,6 +79,8 @@ public class HttpApiClient : IApiClient
 
     public Task<GameState> ClaimDailyRewardAsync() => SendSignedInAsync<GameState>("POST", "/daily/claim");
 
+    public Task<GameState> RefillEnergyAsync() => SendSignedInAsync<GameState>("POST", "/energy/refill");
+
     private async Task<T> SendSignedInAsync<T>(string method, string path, object body = null)
     {
         if (_session == null)

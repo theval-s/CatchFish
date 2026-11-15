@@ -197,6 +197,7 @@ Everything except `/config`, `/time` and `/auth/guest…` needs `Authorization: 
 | `POST` | `/runs/start` | | `GameState` with `activeRun` set |
 | `POST` | `/runs/complete` | `{ "runId": string, "shotFish": { fishId: count } }` | `GameState` with `activeRun` null |
 | `POST` | `/daily/claim` | | `GameState` |
+| `POST` | `/energy/refill` | | `GameState` with full energy |
 
 Dev API, every request with the header `X-Dev-Key: <key>`:
 
@@ -229,18 +230,23 @@ The config changes answer with the new config. Errors come back as `{ "error": c
 | 409 | `quest_not_active` | The quest isn't open for this player |
 | 409 | `no_active_run` | `runId` isn't the player's current run |
 | 409 | `already_claimed` | Today's daily reward is already taken |
+| 409 | `not_enough_energy` | Less energy than a run costs |
+| 409 | `energy_full` | Energy is already full |
 
 ## Rules
 
 - **New player**: the profile starts with the config's `startingQuests` and auto-start quests open,
   everything else at zero.
-- **Every request with a profile** first brings it up to date with the config: auto-start quests the player
-  hasn't done are opened, open quests that no longer exist are dropped.
+- **Every request with a profile** first brings it up to date with the config and the time: auto-start quests
+  the player hasn't done are opened, open quests that no longer exist are dropped, energy regenerates.
+- **Energy** (`energy` in the config: `max`, `regenMinutes`, `runCost`, `refillGems`): a profile starts full.
+  Below `max`, one point comes back every `regenMinutes` after `energy.updatedAt`; at `max` the timer stops,
+  and the run that spends from full restarts it. Refill: spends `refillGems` gems and fills it up.
 - **Buy gear**: the level must be below `maxLevel` and `dr` must cover `baseCost * costGrowth^level`.
   Spends `dr`, raises the level.
 - **Complete quest**: the quest must be active and every requirement covered. Spends the requirements,
   moves the quest to `completed` and opens the quests in `unlocksId`.
-- **Start run**: records `activeRun`: an id, the start time, and the line length and hook capacity
+- **Start run**: spends `runCost` energy, then records `activeRun`: an id, the start time, and the line length and hook capacity
   at the current gear levels. A new start replaces a run that was never completed.
 - **Complete run**: the client reports which fish were shot, not how much they were worth. The server
   checks the run, then adds the fish values to `dr` (never below 0), collectible fish to `fishCollection`,

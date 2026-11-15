@@ -1,20 +1,25 @@
 using System;
 using VContainer.Unity;
 
-/// <summary>Starts fishing runs from the hub and shows the "!" on the Quests tab.</summary>
+/// <summary>Starts fishing runs from the hub (or offers a refill without energy) and shows the "!" on the Quests tab.</summary>
 public class HubMenuPresenter : IStartable, IDisposable
 {
     private readonly HubMenuView _view;
     private readonly FishingService _fishing;
     private readonly QuestService _quests;
+    private readonly EnergyService _energy;
+    private readonly EnergyView _energyView;
     private readonly SceneLoader _scenes;
     private bool _starting;
 
-    public HubMenuPresenter(HubMenuView view, FishingService fishing, QuestService quests, SceneLoader scenes)
+    public HubMenuPresenter(HubMenuView view, FishingService fishing, QuestService quests, EnergyService energy,
+        EnergyView energyView, SceneLoader scenes)
     {
         _view = view;
         _fishing = fishing;
         _quests = quests;
+        _energy = energy;
+        _energyView = energyView;
         _scenes = scenes;
     }
 
@@ -37,6 +42,12 @@ public class HubMenuPresenter : IStartable, IDisposable
     {
         if (_starting)
         {
+            return;
+        }
+
+        if (!_energy.CanStartRun)
+        {
+            _energyView.Open();
             return;
         }
 

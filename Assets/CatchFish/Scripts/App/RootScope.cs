@@ -38,6 +38,7 @@ public class RootScope : LifetimeScope
         // Domain
         builder.Register<ResourceService>(Lifetime.Singleton);
         builder.Register<UpgradeService>(Lifetime.Singleton);
+        builder.Register<EnergyService>(Lifetime.Singleton);
         builder.Register<FishingService>(Lifetime.Singleton);
         builder.Register<QuestService>(Lifetime.Singleton);
         builder.Register<DailyRewardService>(Lifetime.Singleton);

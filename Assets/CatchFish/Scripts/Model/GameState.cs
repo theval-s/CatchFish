@@ -11,6 +11,7 @@ public class GameState
     public QuestProgressState Quests { get; set; } = new QuestProgressState();
     public UpgradeProgressState Upgrades { get; set; } = new UpgradeProgressState();
     public DailyRewardState Daily { get; set; } = new DailyRewardState();
+    public EnergyState Energy { get; set; } = new EnergyState();
 
     /// <summary>The fishing run the backend expects results for, or null.</summary>
     public ActiveRunState ActiveRun { get; set; }
@@ -111,4 +112,13 @@ public class DailyRewardState
 
     /// <summary>Server calendar day of the last claim (days since 1970); -1 = never.</summary>
     public int LastClaimDay { get; set; } = -1;
+}
+
+/// <summary>Energy as of <see cref="UpdatedAt"/>; <see cref="EnergyService"/> adds what came back since.</summary>
+public class EnergyState
+{
+    public int Amount { get; set; }
+
+    /// <summary>When the next point started to regenerate (server time).</summary>
+    public DateTime UpdatedAt { get; set; }
 }

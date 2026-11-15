@@ -9,12 +9,14 @@ public class FishingService
 {
     private readonly IApiClient _api;
     private readonly UpgradeService _upgrades;
+    private readonly EnergyService _energy;
     private readonly ProfileSyncService _profile;
 
-    public FishingService(IApiClient api, UpgradeService upgrades, ProfileSyncService profile)
+    public FishingService(IApiClient api, UpgradeService upgrades, EnergyService energy, ProfileSyncService profile)
     {
         _api = api;
         _upgrades = upgrades;
+        _energy = energy;
         _profile = profile;
     }
 
@@ -29,10 +31,12 @@ public class FishingService
     /// <summary>The backend records the run first, so it can check the results later.</summary>
     public async Task<bool> TryStartRunAsync()
     {
-        if (!await _profile.TryApplyAsync(_api.StartRunAsync()))
+        if (!_energy.CanStartRun || !await _profile.TryApplyAsync(_api.StartRunAsync()))
         {
             return false;
         }
+
+        _energy.NotifyChanged();
 
         Session = new FishingSessionState
         {

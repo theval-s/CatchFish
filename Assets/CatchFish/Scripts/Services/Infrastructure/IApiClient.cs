@@ -33,4 +33,6 @@ public interface IApiClient
     Task<GameState> CompleteRunAsync(RunResult result);
 
     Task<GameState> ClaimDailyRewardAsync();
+
+    Task<GameState> RefillEnergyAsync();
 }

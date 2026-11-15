@@ -38,7 +38,7 @@ void AddGameRoutes(httplib::Server& server, App& app)
                 }
 
                 const auto& rules = app.content.Rules();
-                const auto refreshed = rules.Refresh(*state);
+                const auto refreshed = rules.Refresh(*state, now);
                 if (change)
                 {
                     change(*state, body, rules, now);
@@ -132,5 +132,10 @@ void AddGameRoutes(httplib::Server& server, App& app)
     server.Post("/daily/claim", profileAction([](GameState& state, const json&, const GameRules& rules, Clock::time_point now)
     {
         rules.ClaimDailyReward(state, now);
+    }));
+
+    server.Post("/energy/refill", profileAction([](GameState& state, const json&, const GameRules& rules, Clock::time_point now)
+    {
+        rules.RefillEnergy(state, now);
     }));
 }

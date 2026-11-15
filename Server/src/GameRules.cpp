@@ -156,13 +156,15 @@ GameState GameRules::CreateProfile(Clock::time_point now) const
 {
     GameState state;
     state.quests.active = _config.startingQuests;
-    Refresh(state);
+    Refresh(state, now);
     state.savedAt = FormatTime(now);
     return state;
 }
 
-bool GameRules::Refresh(GameState& state) const
+bool GameRules::Refresh(GameState& state, Clock::time_point now) const
 {
+    const auto energyChanged = SettleEnergy(state, now);
+
     auto& progress = state.quests;
     const auto before = progress.active;
 
@@ -179,7 +181,59 @@ bool GameRules::Refresh(GameState& state) const
         }
     }
 
-    return progress.active != before;
+    return progress.active != before || energyChanged;
+}
+
+bool GameRules::SettleEnergy(GameState& state, Clock::time_point now) const
+{
+    const auto& config = _config.energy;
+    auto& energy = state.energy;
+    if (energy.updatedAt.empty())
+    {
+        energy.amount = config.max;
+        energy.updatedAt = FormatTime(now);
+        return true;
+    }
+
+    // The timer doesn't run while full; spending from full restarts it.
+    if (energy.amount >= config.max)
+    {
+        return false;
+    }
+
+    const auto since = ParseTime(energy.updatedAt);
+    const auto interval = std::chrono::minutes(config.regenMinutes);
+    const auto gained = std::max<long long>(0, (now - since) / interval);
+    if (gained == 0)
+    {
+        return false;
+    }
+
+    if (energy.amount + gained >= config.max)
+    {
+        energy.amount = config.max;
+        energy.updatedAt = FormatTime(now);
+    }
+    else
+    {
+        energy.amount += static_cast<int>(gained);
+        energy.updatedAt = FormatTime(since + gained * interval);
+    }
+
+    return true;
+}
+
+void GameRules::RefillEnergy(GameState& state, Clock::time_point now) const
+{
+    auto& energy = state.energy;
+    if (energy.amount >= _config.energy.max)
+    {
+        throw ApiError(409, "energy_full", "energy is already full");
+    }
+
+    Spend(state.player, {{"gems", _config.energy.refillGems}});
+    energy.amount = _config.energy.max;
+    energy.updatedAt = FormatTime(now);
 }
 
 void GameRules::ClaimDailyReward(GameState& state, Clock::time_point now) const
@@ -251,6 +305,20 @@ void GameRules::CompleteQuest(GameState& state, int questId) const
 void GameRules::StartRun(GameState& state, Clock::time_point now) const
 {
     // TODO: refuse while the wanted level is too high, once it exists
+    // Refresh has already regenerated the energy.
+    auto& energy = state.energy;
+    const auto cost = _config.energy.runCost;
+    if (energy.amount < cost)
+    {
+        throw ApiError(409, "not_enough_energy",
+            std::to_string(energy.amount) + " / " + std::to_string(cost));
+    }
+    if (energy.amount >= _config.energy.max)
+    {
+        energy.updatedAt = FormatTime(now);
+    }
+    energy.amount -= cost;
+
     ActiveRunState run;
     run.id = RandomHex(16);
     run.startedAt = FormatTime(now);
@@ -405,6 +473,13 @@ void GameRules::Validate() const
                 InvalidConfig(name + " gives " + std::to_string(amount) + " of '" + id + "'");
             }
         }
+    }
+
+    const auto& energy = _config.energy;
+    if (energy.max <= 0 || energy.regenMinutes <= 0 || energy.runCost < 0 || energy.runCost > energy.max
+        || energy.refillGems < 0)
+    {
+        InvalidConfig("energy needs max > 0, regenMinutes > 0, 0 <= runCost <= max and refillGems >= 0");
     }
 }
 

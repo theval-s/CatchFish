@@ -16,18 +16,21 @@ public:
 
     GameState CreateProfile(Clock::time_point now) const;
 
-    /// Brings a profile up to date with a config that may have changed since it was saved: opens
-    /// auto-start quests, drops open quests that no longer exist. True if anything changed.
-    bool Refresh(GameState& state) const;
+    /// Brings a profile up to date with a config that may have changed since it was saved and with
+    /// the time: opens auto-start quests, drops open quests that no longer exist, regenerates energy.
+    /// True if anything changed.
+    bool Refresh(GameState& state, Clock::time_point now) const;
 
     void BuyGear(GameState& state, const std::string& gearId) const;
     void CompleteQuest(GameState& state, int questId) const;
     void StartRun(GameState& state, Clock::time_point now) const;
     void CompleteRun(GameState& state, const RunResult& result, Clock::time_point now) const;
     void ClaimDailyReward(GameState& state, Clock::time_point now) const;
+    void RefillEnergy(GameState& state, Clock::time_point now) const;
 
 private:
     void Validate() const;
+    bool SettleEnergy(GameState& state, Clock::time_point now) const;
     bool IsResource(const std::string& id) const;
     const FishType* FindFish(const std::string& id) const;
     const QuestData* FindQuest(int id) const;
